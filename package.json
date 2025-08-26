@@ -1,0 +1,57 @@
+{
+  "name": "ai-powered-dev-workspace",
+  "version": "1.0.0",
+  "description": "An interactive, full-stack developer workspace with AI-powered features and a Notion-inspired design.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "keywords": [
+    "AI",
+    "developer",
+    "workspace",
+    "Notion",
+    "full-stack"
+  ],
+  "author": "Bola Banjo",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^13.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+  "tailwindcss": "^3.0.0",
+  "@supabase/supabase-js": "^2.47.5",
+    "zustand": "^4.0.0",
+    "react-query": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.0",
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0",
+    "jest": "^27.0.0",
+    "postcss": "^8.0.0",
+    "autoprefixer": "^10.0.0",
+  "@types/node": "^18.0.0",
+  "ts-jest": "^27.1.4",
+  "@types/jest": "^27.4.1",
+  "@testing-library/react": "^13.4.0",
+  "@testing-library/jest-dom": "^5.16.5",
+  "node-mocks-http": "^1.11.0",
+  "msw": "^1.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bolaabanjo/gitstack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bolaabanjo/gitstack/issues" 
+  },
+  "homepage": "https://github.com/bolaabanjo/gitstack#readme"
+}
