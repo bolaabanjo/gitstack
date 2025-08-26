@@ -21,7 +21,7 @@ The AI-Powered Developer Workspace is an interactive, full-stack development env
 ## Setup Instructions
 1. Clone the repository:
    ```
-   git clone <repository-url>
+   git clone <gitstack>
    cd ai-powered-dev-workspace
    ```
 
