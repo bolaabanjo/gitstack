@@ -17,7 +17,20 @@ def main():
     """Gitstack CLI - An advanced modern version control system."""
     pass
 
-@main.command()
+@click.command()
+def date():
+    """Prints the current date and time."""
+    now = datetime.now(timezone.utc)
+    click.echo("Current date and time (UTC): {}".format(now.isoformat()))
+
+@click.command()
+def time():
+    """Prints the current time."""
+    now = datetime.now(timezone.utc)
+    click.echo("Current time (UTC): {}".format(now.time().isoformat()))
+
+
+@click.command()
 def snap():
     """Captures current code, dependencies, and environment."""
     ensure_snapshot_dir()
@@ -49,7 +62,7 @@ def snap():
         json.dump(data, f, indent=2)
     click.echo("Snapshot taken! Total snapshots: {}".format(len(data)))
 
-@main.command()
+@click.command()
 def restore():
     """Restore the last snapshot (just print files for now)."""
     if not os.path.exists(SNAPSHOT_FILE):
@@ -74,6 +87,8 @@ def restore():
 
 main.add_command(snap)
 main.add_command(restore)
+main.add_command(date)
+main.add_command(time)
 
 if __name__ == "__main__":
     main()
