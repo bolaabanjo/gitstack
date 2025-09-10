@@ -10,5 +10,5 @@ setup(
         "click",
         "tabulate",
     ],
-    entry_points={"console_scripts": ["gitstack = main:main"]},
+    entry_points={"console_scripts": ["gitstack=gitstack.main:main"]},
 )
