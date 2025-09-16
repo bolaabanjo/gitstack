@@ -18,10 +18,17 @@ def main():
     pass
 
 @click.command()
+def make():
+    """Initializes a new gitstack repository."""
+    ensure_snapshot_dir()
+    click.echo("Initialized empty Gitstack repository in {}".format(os.path.abspath(SNAPSHOT_DIR)))
+
+
+@click.command()
 def date():
     """Prints the current date and time."""
     now = datetime.now(timezone.utc)
-    click.echo("Current date and time (UTC): {}".format(now.isoformat()))
+    click.echo("Current date (UTC): {}".format(now.date().isoformat()))
 
 @click.command()
 def time():
@@ -82,13 +89,13 @@ def restore():
     click.echo("Files included:")
     for f in last_snapshot["files"]:
         click.echo(f)
-
-
+    
 
 main.add_command(snap)
 main.add_command(restore)
 main.add_command(date)
 main.add_command(time)
+main.add_command(make)
 
 if __name__ == "__main__":
     main()

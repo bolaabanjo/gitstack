@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="gitstack",
-    version="0.2.0",
+    version="0.3.0",
     description="An advanced modern version control system",
     packages=find_packages(),
     authors=["Bola Banjo <omogbolahanng@gmail.com>"],
