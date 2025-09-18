@@ -18,6 +18,7 @@ def main():
     pass
 
 @click.command()
+@click.argument('make')
 def make():
     """Initializes a new gitstack repository."""
     ensure_snapshot_dir()
@@ -90,6 +91,12 @@ def restore():
     for f in last_snapshot["files"]:
         click.echo(f)
     
+@click.command
+def deploy(): 
+    """"Deploys code to the cloud"""
+
+
+
 
 main.add_command(snap)
 main.add_command(restore)
