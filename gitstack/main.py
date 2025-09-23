@@ -1,6 +1,11 @@
 import click
 import os
 import json
+import webbrowser
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse, parse_qs
+import threading
+import socket
 import requests
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -11,7 +16,12 @@ load_dotenv()
 # Directory where snapshots will be stored
 SNAPSHOT_DIR = ".gitstack"
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "snapshots.json")
-CONVEX_URL = os.getenv("CONVEX_URL", "YOUR_CONVEX_DEPLOYMENT_URL_HERE")
+CONVEX_URL = os.getenv("CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL")
+
+# Gitstack Web App URL
+GITSTACK_WEB_APP_URL = os.getenv("GITSTACK_WEB_APP_URL", "http://localhost:3000")
+CLI_AUTH_CALLBACK_PORT = 8000 # Port for the local CLI server to listen on
+CLI_AUTH_CALLBACK_PATH = "/auth-callback" # Path for the local CLI server
 
 # Clerk Authentication Configuration
 CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY", "sk_test_YOUR_CLERK_SECRET_KEY")
@@ -102,6 +112,49 @@ def call_clerk_api(endpoint, method="GET", json_data=None, include_token=False):
         click.echo(f"Error calling Clerk API {endpoint}: {e}")
         return None
 
+# Global variable to store the received auth token and user ID
+received_auth_data = {}
+
+class CLIAuthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        global received_auth_data
+        
+        # Check if the request is for our expected callback path
+        if self.path.startswith(CLI_AUTH_CALLBACK_PATH):
+            query_params = parse_qs(urlparse(self.path).query)
+            
+            # Extract the necessary data from the query parameters
+            # Clerk usually redirects with `__session` or similar for JWTs
+            # We'll expect a `clerk_session_token`, `clerk_user_id`, and `convex_user_id` from our web app.
+            
+            clerk_session_token = query_params.get("clerk_session_token", [None])[0]
+            clerk_user_id = query_params.get("clerk_user_id", [None])[0]
+            convex_user_id = query_params.get("convex_user_id", [None])[0] # Our web app will provide this
+
+            if clerk_session_token and clerk_user_id and convex_user_id:
+                received_auth_data = {
+                    "clerk_session_token": clerk_session_token,
+                    "clerk_user_id": clerk_user_id,
+                    "convex_user_id": convex_user_id,
+                }
+                self.send_response(200)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><body><h1>Authentication successful!</h1><p>You can close this tab and return to the terminal.</p></body></html>")
+            else:
+                self.send_response(400)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write(b"<html><body><h1>Authentication failed.</h1><p>Missing required parameters.</p></body></html>")
+            
+            # Since we got a response, we can stop the server (this is handled by the main thread)
+            # self.server.shutdown() # This is handled by the calling function.
+        else:
+            self.send_response(404)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><h1>Not Found</h1></body></html>")
+
 @click.group()
 def main():
     """Gitstack - An advanced modern version control system."""
@@ -129,55 +182,63 @@ def time():
 
 @click.command()
 def login():
-    """Logs in to the Gitstack platform."""
-    click.echo("Logging in to the Gitstack platform...")
-    email = click.prompt("Enter your email")
-    password = click.prompt("Enter your password", hide_input=True)
+    """Logs in to Gitstack via browser."""
+    click.echo("Iniializing Browser to log into Gitstack...")
 
-    # 1. Authenticate with Clerk
+    redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
+
+    # Construct the URL for the web app's sign-in page
+    # We pass the redirect_uri to the web app so it knows where to send the user back
+    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-in?redirect_uri={redirect_uri}"
+
     try:
-        clerk_response = call_clerk_api("client/sessions", method="POST", json_data={
-            "identifier": email,
-            "password": password
-        }, include_token=False) # Secret key for direct session creation
+        webbrowser.open_new_tab(auth_url)
+    except webbrowser.Error:
+        click.echo(f"Could not open web browser. Please open this URL manually:")
+        click.echo(auth_url)
+    
+    click.echo(f"Waiting for authentication to complete in your browser on {redirect_uri}...")
 
-        if not clerk_response or not clerk_response.get("jwt"):
-            click.echo("Login failed with Clerk. Please check your credentials.")
-            return
+    # Start a local HTTP server in a separate thread to listen for the callback
+    # We need a free port, so we try a few or let the system assign one.
+    server = None
+    try:
+        server = HTTPServer(("localhost", CLI_AUTH_CALLBACK_PORT), CLIAuthHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True # Allow main program to exit even if thread is running
+        server_thread.start()
+
+        # Wait for a short period, checking if auth data has been received
+        timeout_seconds = 60
+        start_time = datetime.now()
         
-        clerk_session_token = clerk_response["jwt"]
-        clerk_user_id = clerk_response["user_id"]
+        global received_auth_data
+        received_auth_data = {} # Clear any previous data
 
-    except Exception as e:
-        click.echo(f"An error occurred during Clerk login: {e}")
-        return
+        while (datetime.now() - start_time).total_seconds() < timeout_seconds:
+            if received_auth_data:
+                break
+            server_thread.join(1) # Wait 1 second, then check again
+    
+    finally:
+        if server:
+            server.shutdown()
+            server.server_close()
+        
+    if received_auth_data:
+        clerk_session_token = received_auth_data.get("clerk_session_token")
+        clerk_user_id = received_auth_data.get("clerk_user_id")
+        convex_user_id = received_auth_data.get("convex_user_id")
 
-    # 2. Link/get user in Convex
-    convex_user_data = call_convex_function("query", "users:getUserByClerkId", {"clerkUserId": clerk_user_id})
-    convex_user_id = None
-
-    if convex_user_data and convex_user_data.get("value"):
-        convex_user_id = convex_user_data["value"]["_id"]
-        # Update last login timestamp in Convex
-        call_convex_function("mutation", "users:updateLastLogin", {"clerkUserId": clerk_user_id})
-    else:
-        # If user doesn't exist in Convex, create them
-        click.echo("User not found in Convex, creating a new entry.")
-        new_convex_user = call_convex_function("mutation", "users:createUser", {
-            "clerkUserId": clerk_user_id,
-            "email": email
-        })
-        if new_convex_user:
-            convex_user_id = new_convex_user["value"]
+        if clerk_session_token and clerk_user_id and convex_user_id:
+            save_session_data(clerk_session_token, convex_user_id, clerk_user_id)
+            click.echo("Logged in successfully via browser!")
+            # We don't have the email easily here, but the user is logged in.
+            click.echo(f"Welcome, Clerk User ID: {clerk_user_id}!")
         else:
-            click.echo("Failed to create user entry in Convex.")
-            return
-
-    # 3. Save session locally
-    save_session_data(clerk_session_token, convex_user_id, clerk_user_id)
-
-    click.echo("Logged in successfully.")
-    click.echo(f"Welcome, {email}!")
+            click.echo("Failed to retrieve complete authentication data from browser callback.")
+    else:
+        click.echo("Authentication timed out or failed to receive callback from browser.")
 
 @click.command()
 def snap():
@@ -210,54 +271,59 @@ def logout():
 
 @click.command()
 def signup():
-    """Signs up for the Gitstack."""
+    """Signs up for the Gitstack via browser."""
     click.echo("Signing up for Gitstack...")
-    email = click.prompt("Enter your email")
-    password = click.prompt("Enter your password", hide_input=True)
+    
+    # Construct the redirect URL for our local server
+    redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
 
-    # 1. Create user in Clerk
+    # Construct the URL for the web app's sign-up page
+    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-up?redirect_uri={redirect_uri}"
+
     try:
-        clerk_response = call_clerk_api("users", method="POST", json_data={
-            "email_address": [email],
-            "password": password
-        }, include_token=False) # Secret key for direct user creation
+        webbrowser.open_new_tab(auth_url)
+    except webbrowser.Error:
+        click.echo(f"Could not open web browser. Please open this URL manually:")
+        click.echo(auth_url)
 
-        if not clerk_response or not clerk_response.get("id"):
-            click.echo("Clerk signup failed. User might already exist or invalid credentials.")
-            return
+    click.echo(f"Waiting for signup to complete in your browser on {redirect_uri}...")
+
+    server = None
+    try:
+        server = HTTPServer(("localhost", CLI_AUTH_CALLBACK_PORT), CLIAuthHandler)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+
+        timeout_seconds = 60
+        start_time = datetime.now()
         
-        clerk_user_id = clerk_response["id"]
+        global received_auth_data
+        received_auth_data = {} # Clear any previous data
 
-    except Exception as e:
-        click.echo(f"An error occurred during Clerk signup: {e}")
-        return
+        while (datetime.now() - start_time).total_seconds() < timeout_seconds:
+            if received_auth_data:
+                break
+            server_thread.join(1) # Wait 1 second, then check again
 
-    # 2. Create user in Convex and link with Clerk ID
-    new_convex_user = call_convex_function("mutation", "users:createUser", {
-        "clerkUserId": clerk_user_id,
-        "email": email
-    })
+    finally:
+        if server:
+            server.shutdown()
+            server.server_close()
 
-    if new_convex_user:
-        convex_user_id = new_convex_user["value"]
-        # For signup, we also log them in directly
-        click.echo("Signed up successfully. Attempting to log you in...")
-        
-        # After signup, simulate login to get a session token and save it
-        login_response = call_clerk_api("client/sessions", method="POST", json_data={
-            "identifier": email,
-            "password": password
-        }, include_token=False)
+    if received_auth_data:
+        clerk_session_token = received_auth_data.get("clerk_session_token")
+        clerk_user_id = received_auth_data.get("clerk_user_id")
+        convex_user_id = received_auth_data.get("convex_user_id")
 
-        if login_response and login_response.get("jwt"):
-            clerk_session_token = login_response["jwt"]
+        if clerk_session_token and clerk_user_id and convex_user_id:
             save_session_data(clerk_session_token, convex_user_id, clerk_user_id)
-            click.echo(f"Welcome, {email}!")
+            click.echo("Signed up and logged in successfully via browser!")
+            click.echo(f"Welcome, Clerk User ID: {clerk_user_id}!")
         else:
-            click.echo("Signed up successfully, but failed to automatically log in. Please try `gitstack login`.")
-
+            click.echo("Failed to retrieve complete authentication data from browser callback.")
     else:
-        click.echo("Failed to create user entry in Convex after Clerk signup.")
+        click.echo("Signup timed out or failed to receive callback from browser.")
 
 @click.command()
 def delete():
