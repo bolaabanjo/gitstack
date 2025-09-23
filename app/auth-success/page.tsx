@@ -81,7 +81,7 @@ export default function AuthSuccessPage() {
         try {
           // This call must be a mutation if the user might not exist, or a query for existing users.
           // Let's assume a client-side mutation that creates or retrieves.
-          const convexUser = await fetch('/api/getConvexUserId', { // You will create this API route
+          const convexUser = await fetch('/api/getConvexUserId', { // Create this API route
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
