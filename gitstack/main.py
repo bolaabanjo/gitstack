@@ -118,6 +118,8 @@ received_auth_data = {}
 
 # ... (lines before CLIAuthHandler, e.g., received_auth_data global variable) ...
 
+# ... (existing CLIAuthHandler class) ...
+
 class CLIAuthHandler(BaseHTTPRequestHandler):
     def _set_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -125,18 +127,22 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def do_OPTIONS(self):
+        print(f"CLIAuthHandler: Received OPTIONS request from {self.client_address[0]} for {self.path}") # ADD THIS LOG
         self.send_response(204)
         self._set_cors_headers()
         self.end_headers()
 
     def do_POST(self):
+        print(f"CLIAuthHandler: Received POST request from {self.client_address[0]} for {self.path}") # ADD THIS LOG
         global received_auth_data
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else b""
         try:
             data = json.loads(body.decode("utf-8") or "{}")
-        except Exception:
+            print(f"CLIAuthHandler: POST Data: {data}") # ADD THIS LOG
+        except Exception as e:
             data = {}
+            print(f"CLIAuthHandler: Error parsing POST body: {e}") # ADD THIS LOG
 
         clerk_session_token = data.get("clerk_session_token")
         clerk_user_id = data.get("clerk_user_id")
@@ -154,6 +160,7 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"<html><body><h1>Authentication successful!</h1><p>You can close this tab and return to the terminal.</p></body></html>")
         else:
+            print("CLIAuthHandler: Missing data in POST request.") # ADD THIS LOG
             self.send_response(400)
             self._set_cors_headers()
             self.send_header("Content-type", "text/html")
@@ -161,10 +168,12 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
             self.wfile.write(b"<html><body><h1>Authentication failed.</h1><p>Missing required parameters.</p></body></html>")
 
     def do_GET(self):
+        print(f"CLIAuthHandler: Received GET request from {self.client_address[0]} for {self.path}") # ADD THIS LOG
         global received_auth_data
 
         if self.path.startswith(CLI_AUTH_CALLBACK_PATH):
             query_params = parse_qs(urlparse(self.path).query)
+            print(f"CLIAuthHandler: GET Query Params: {query_params}") # ADD THIS LOG
             clerk_session_token = query_params.get("clerk_session_token", [None])[0]
             clerk_user_id = query_params.get("clerk_user_id", [None])[0]
             convex_user_id = query_params.get("convex_user_id", [None])[0]
@@ -181,6 +190,7 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b"<html><body><h1>Authentication successful!</h1><p>You can close this tab and return to the terminal.</p></body></html>")
             else:
+                print("CLIAuthHandler: Missing data in GET request.") # ADD THIS LOG
                 self.send_response(400)
                 self._set_cors_headers()
                 self.send_header("Content-type", "text/html")
@@ -192,8 +202,6 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(b"<html><body><h1>Not Found</h1></body></html>")
-
-# ... (lines after CLIAuthHandler, e.g., @click.group() main()) ...
 
 @click.group()
 def main():
