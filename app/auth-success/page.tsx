@@ -3,124 +3,106 @@
 
 import { useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter, useSearchParams } from 'next/navigation'; // Import useSearchParams
-import { useQuery } from 'convex/react'; // Import useQuery from Convex
-import { api } from '../../convex/_generated/api'; // Assuming your Convex API is here
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function AuthSuccessPage() {
-  const { isLoaded, isSignedIn, sessionId, getToken, userId: clerkAuthUserId } = useAuth(); // Renamed userId to clerkAuthUserId to avoid conflict
+  const { isLoaded, isSignedIn, sessionId, getToken, userId: clerkAuthUserId } = useAuth();
   const { user } = useUser();
   const router = useRouter();
-  const searchParams = useSearchParams(); // Get URL search parameters
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    async function handleAuthSuccessRedirect() {
+    async function handleAuthSuccess() {
+      console.log("AuthSuccessPage: useEffect started. isLoaded:", isLoaded, "isSignedIn:", isSignedIn);
       if (isLoaded && isSignedIn && sessionId && user && clerkAuthUserId) {
-        // 1. Get the redirect_uri that the CLI provided
-        const redirectUri = searchParams.get('redirect_uri');
+        console.log("AuthSuccessPage: User is signed in and session is loaded.");
+        const redirectUri = searchParams.get('redirect_uri'); // This is the CLI's local callback URL
 
         if (!redirectUri) {
-          console.error("Missing redirect_uri in URL. Cannot complete CLI authentication.");
-          // Optionally, redirect to a standard web app dashboard or show an error
+          console.error("AuthSuccessPage: Missing redirect_uri in URL. Cannot complete CLI authentication. Redirecting to home.");
           router.push('/');
           return;
         }
+        console.log("AuthSuccessPage: CLI redirectUri found:", redirectUri);
 
         const clerkSessionToken = await getToken(); // Get the JWT token
-        const clerkUserId = clerkAuthUserId; // Use the userId from useAuth
+        const clerkUserId = clerkAuthUserId;
 
         if (!clerkSessionToken || !clerkUserId) {
-          console.error("Clerk session token or user ID not found.");
+          console.error("AuthSuccessPage: Clerk session token or user ID not found. Redirecting to sign-in.");
           router.push('/sign-in');
           return;
         }
-
-        // 2. Query Convex to get the Convex user ID associated with the Clerk user ID
-        // Note: This needs to be done within a valid Convex React context.
-        // I'll simulate the query here for now, but in a full Convex setup,
-        // I'd call a query function. For a quick fix to avoid issues,
-        // we'll fetch the user data in a client-side friendly way that you'll implement next.
-        // For now, we'll use a placeholder for `convexUserId`
-
-        // **** IMPORTANT: We need to fetch the Convex user ID. ****
-        // This is a crucial part. The `useQuery` hook needs to be
-        // at the top level of the component or within a component
-        // that is wrapped by the Convex React Provider.
-        // Since this is a client component, we can use useQuery directly.
-
-        // Placeholder for now, we'll refine this in the next step.
-        // This query needs to run in a way that doesn't block the redirect.
-
-        // For now, let's assume we can directly query the Clerk ID from the Convex functions,
-        // but remember, this `useQuery` call below is what actually gets the data.
-        // We will make sure this query is enabled only when `clerkUserId` is available.
-        // This will be resolved when we look at the Convex part of the setup.
-        
-        // For now, let's defer the actual Convex fetching to the client side
-        // to avoid re-rendering issues with `useQuery` inside useEffect initially.
-        // We'll make a separate section for Convex integration.
-        
-        // For the IMMEDIATE fix to unblock, let's assume we can get a convex_user_id
-        // via a direct mutation/query from the client, which is what we need to set up.
-        // For the purpose of getting the CLI working, we need the convex_user_id to be
-        // available in this `redirect_url` to the CLI.
-
-        // For the immediate purpose, let's just make sure the `redirectUri` works.
-        // We need a way to get the convexUserId from the web app.
-
-        // We will need to make an *API call* from the web app to its own backend (e.g., /api/get-convex-user-id)
-        // or a Convex mutation from the client to link Clerk ID with Convex ID if it doesn't exist.
-
-        // This `AuthSuccessPage` is a client component. We can use `useQuery` here.
-        // Let's refine the approach:
-        // 1. Check if user exists in Convex.
-        // 2. If not, create user in Convex and get its ID.
-        // 3. Then proceed with the redirect.
+        console.log("AuthSuccessPage: Clerk token and user ID obtained.");
 
         let convexUserId = null;
         try {
-          // This call must be a mutation if the user might not exist, or a query for existing users.
-          // Let's assume a client-side mutation that creates or retrieves.
-          const convexUser = await fetch('/api/getConvexUserId', { // Create this API route
+          console.log("AuthSuccessPage: Calling /api/getConvexUserId with clerkUserId:", clerkUserId);
+          const convexUserResponse = await fetch('/api/getConvexUserId', {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
               },
               body: JSON.stringify({ clerkUserId, clerkSessionToken }),
-          }).then(res => res.json());
+          });
 
+          if (!convexUserResponse.ok) {
+            const errorText = await convexUserResponse.text();
+            console.error("AuthSuccessPage: /api/getConvexUserId API call failed with status", convexUserResponse.status, "Response:", errorText);
+            router.push('/');
+            return;
+          }
+
+          const convexUser = await convexUserResponse.json();
+          
           if (convexUser && convexUser.convexUserId) {
             convexUserId = convexUser.convexUserId;
+            console.log("AuthSuccessPage: Successfully got Convex User ID:", convexUserId);
           } else {
-            console.error("Failed to get Convex User ID from web app API.");
+            console.error("AuthSuccessPage: Failed to get Convex User ID from web app API. Response:", convexUser);
             router.push('/');
             return;
           }
 
         } catch (error) {
-          console.error("Error fetching Convex user ID in auth-success:", error);
+          console.error("AuthSuccessPage: Error fetching Convex user ID in auth-success:", error);
           router.push('/');
           return;
         }
 
-        // 3. Construct the callback URL for the CLI
-        const finalRedirectUrl = new URL(redirectUri);
-        finalRedirectUrl.searchParams.set('clerk_session_token', clerkSessionToken);
-        finalRedirectUrl.searchParams.set('clerk_user_id', clerkUserId);
-        finalRedirectUrl.searchParams.set('convex_user_id', convexUserId); // Add the Convex user ID
-
-        // 4. Redirect the browser back to the CLI's local server
-        window.location.href = finalRedirectUrl.toString();
+        // Now, instead of window.location.href, we use fetch to POST to the CLI's local server.
+        try {
+          console.log("AuthSuccessPage: Sending auth data to CLI via POST to:", redirectUri);
+          await fetch(redirectUri, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clerk_session_token: clerkSessionToken,
+              clerk_user_id: clerkUserId,
+              convex_user_id: convexUserId,
+            }),
+          });
+          console.log("AuthSuccessPage: Successfully sent data to CLI. Redirecting to web app home.");
+          router.push("/"); // Redirect to your web app's home/dashboard after notifying CLI
+        } catch (err) {
+          console.error("AuthSuccessPage: Failed to send auth data to CLI:", err);
+          router.push("/"); // Fallback to home page on failure
+        }
 
       } else if (isLoaded && !isSignedIn) {
-        // If loaded but not signed in, redirect to sign-in page
+        console.log("AuthSuccessPage: isLoaded but not isSignedIn. Redirecting to sign-in.");
         router.push('/sign-in');
       }
     }
 
-    // Only run if Clerk is loaded and user is signed in, and we haven't redirected yet
-    if (isLoaded && isSignedIn && !window.location.search.includes('clerk_session_token')) {
-        handleAuthSuccessRedirect();
+    const hasRedirectUriParam = searchParams.has('redirect_uri');
+    if (isLoaded && isSignedIn && hasRedirectUriParam) {
+        handleAuthSuccess();
+    }
+    // If not part of a CLI flow, and user is signed in, they might be directly visiting.
+    else if (isLoaded && isSignedIn && !hasRedirectUriParam) {
+        console.log("AuthSuccessPage: Signed in but no redirect_uri. Redirecting to home (web dashboard).");
+        router.push('/');
     }
   }, [isLoaded, isSignedIn, sessionId, user, clerkAuthUserId, getToken, router, searchParams]);
 
@@ -129,10 +111,15 @@ export default function AuthSuccessPage() {
     return <div>Loading authentication status...</div>;
   }
 
-  return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      <h1>Completing authentication...</h1>
-      <p>Please wait while we redirect you back to the terminal.</p>
-    </div>
-  );
+  // Show this message specifically when it's part of the CLI flow and waiting for handling
+  if (isSignedIn && searchParams.has('redirect_uri')) {
+      return (
+        <div style={{ padding: '20px', textAlign: 'center' }}>
+          <h1>Completing authentication...</h1>
+          <p>Please wait while we set up your session in the terminal.</p>
+        </div>
+      );
+  }
+
+  return null;
 }
