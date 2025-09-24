@@ -70,24 +70,23 @@ export default function AuthSuccessPage() {
           return;
         }
 
-        // Now, instead of window.location.href, we use fetch to POST to the CLI's local server.
         try {
-          console.log("AuthSuccessPage: Sending auth data to CLI via POST to:", redirectUri);
-          await fetch(redirectUri, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              clerk_session_token: clerkSessionToken,
-              clerk_user_id: clerkUserId,
-              convex_user_id: convexUserId,
-            }),
-          });
-          console.log("AuthSuccessPage: Successfully sent data to CLI. Redirecting to web app home.");
-          router.push("/"); // Redirect to your web app's home/dashboard after notifying CLI
-        } catch (err) {
-          console.error("AuthSuccessPage: Failed to send auth data to CLI:", err);
-          router.push("/"); // Fallback to home page on failure
-        }
+            console.log("AuthSuccessPage: Sending auth data to CLI via POST to:", redirectUri);
+            await fetch(redirectUri, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                clerk_session_token: clerkSessionToken,
+                clerk_user_id: clerkUserId,
+                convex_user_id: convexUserId,
+              }),
+            });
+            console.log("AuthSuccessPage: Successfully sent data to CLI. Redirecting to web app dashboard.");
+            router.push("/dashboard?auth_success=true"); // <-- MODIFIED THIS LINE
+          } catch (err) {
+            console.error("AuthSuccessPage: Failed to send auth data to CLI:", err);
+            router.push("/"); // Fallback to home page on failure
+          }
 
       } else if (isLoaded && !isSignedIn) {
         console.log("AuthSuccessPage: isLoaded but not isSignedIn. Redirecting to sign-in.");
