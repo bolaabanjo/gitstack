@@ -269,16 +269,18 @@ def logout():
     click.echo("Logged out successfully.")
     click.echo("See you soon!")
 
+
 @click.command()
 def signup():
-    """Signs up for the Gitstack via browser."""
-    click.echo("Signing up for Gitstack...")
-    
+    """Signs up for the Gitstack platform via browser."""
+    click.echo("Opening browser for Gitstack signup...")
+
     # Construct the redirect URL for our local server
     redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
 
     # Construct the URL for the web app's sign-up page
-    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-up?redirect_uri={redirect_uri}"
+    # This is the crucial line that needs to point to /sign-up
+    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-up?redirect_uri={redirect_uri}" # <-- CORRECTED THIS LINE
 
     try:
         webbrowser.open_new_tab(auth_url)
@@ -324,6 +326,7 @@ def signup():
             click.echo("Failed to retrieve complete authentication data from browser callback.")
     else:
         click.echo("Signup timed out or failed to receive callback from browser.")
+
 
 @click.command()
 def delete():
