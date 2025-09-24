@@ -7,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 import threading
 import socket
 import requests
-import time
+import time as pytime
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 import hashlib # Import hashlib for file hashing
@@ -258,7 +258,7 @@ def login():
         while (datetime.now() - start_time).total_seconds() < timeout_seconds:
             if received_auth_data:
                 break
-            time.sleep(0.5) # Wait 1 second, then check again
+            pytime.sleep(0.5) # Wait 1 second, then check again
     
     finally:
         if server:
@@ -346,7 +346,7 @@ def signup():
         while (datetime.now() - start_time).total_seconds() < timeout_seconds:
             if received_auth_data:
                 break
-        time.sleep(0.5) # Wait 1 second, then check again
+        pytime.sleep(0.5) # Wait 1 second, then check again
 
     finally:
         if server:
