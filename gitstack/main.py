@@ -7,6 +7,7 @@ from urllib.parse import urlparse, parse_qs
 import threading
 import socket
 import requests
+import time
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 import hashlib # Import hashlib for file hashing
@@ -115,21 +116,58 @@ def call_clerk_api(endpoint, method="GET", json_data=None, include_token=False):
 # Global variable to store the received auth token and user ID
 received_auth_data = {}
 
+# ... (lines before CLIAuthHandler, e.g., received_auth_data global variable) ...
+
 class CLIAuthHandler(BaseHTTPRequestHandler):
+    def _set_cors_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._set_cors_headers()
+        self.end_headers()
+
+    def do_POST(self):
+        global received_auth_data
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length) if content_length > 0 else b""
+        try:
+            data = json.loads(body.decode("utf-8") or "{}")
+        except Exception:
+            data = {}
+
+        clerk_session_token = data.get("clerk_session_token")
+        clerk_user_id = data.get("clerk_user_id")
+        convex_user_id = data.get("convex_user_id")
+
+        if clerk_session_token and clerk_user_id and convex_user_id:
+            received_auth_data = {
+                "clerk_session_token": clerk_session_token,
+                "clerk_user_id": clerk_user_id,
+                "convex_user_id": convex_user_id,
+            }
+            self.send_response(200)
+            self._set_cors_headers()
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><h1>Authentication successful!</h1><p>You can close this tab and return to the terminal.</p></body></html>")
+        else:
+            self.send_response(400)
+            self._set_cors_headers()
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(b"<html><body><h1>Authentication failed.</h1><p>Missing required parameters.</p></body></html>")
+
     def do_GET(self):
         global received_auth_data
-        
-        # Check if the request is for our expected callback path
+
         if self.path.startswith(CLI_AUTH_CALLBACK_PATH):
             query_params = parse_qs(urlparse(self.path).query)
-            
-            # Extract the necessary data from the query parameters
-            # Clerk usually redirects with `__session` or similar for JWTs
-            # We'll expect a `clerk_session_token`, `clerk_user_id`, and `convex_user_id` from our web app.
-            
             clerk_session_token = query_params.get("clerk_session_token", [None])[0]
             clerk_user_id = query_params.get("clerk_user_id", [None])[0]
-            convex_user_id = query_params.get("convex_user_id", [None])[0] # Our web app will provide this
+            convex_user_id = query_params.get("convex_user_id", [None])[0]
 
             if clerk_session_token and clerk_user_id and convex_user_id:
                 received_auth_data = {
@@ -138,22 +176,24 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
                     "convex_user_id": convex_user_id,
                 }
                 self.send_response(200)
+                self._set_cors_headers()
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
                 self.wfile.write(b"<html><body><h1>Authentication successful!</h1><p>You can close this tab and return to the terminal.</p></body></html>")
             else:
                 self.send_response(400)
+                self._set_cors_headers()
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
                 self.wfile.write(b"<html><body><h1>Authentication failed.</h1><p>Missing required parameters.</p></body></html>")
-            
-            # Since we got a response, we can stop the server (this is handled by the main thread)
-            # self.server.shutdown() # This is handled by the calling function.
         else:
             self.send_response(404)
+            self._set_cors_headers()
             self.send_header("Content-type", "text/html")
             self.end_headers()
             self.wfile.write(b"<html><body><h1>Not Found</h1></body></html>")
+
+# ... (lines after CLIAuthHandler, e.g., @click.group() main()) ...
 
 @click.group()
 def main():
@@ -209,16 +249,16 @@ def login():
         server_thread.start()
 
         # Wait for a short period, checking if auth data has been received
-        timeout_seconds = 60
+        timeout_seconds = 120  # increase timeout a bit
         start_time = datetime.now()
-        
+
         global received_auth_data
         received_auth_data = {} # Clear any previous data
 
         while (datetime.now() - start_time).total_seconds() < timeout_seconds:
             if received_auth_data:
                 break
-            server_thread.join(1) # Wait 1 second, then check again
+            time.sleep(0.5) # Wait 1 second, then check again
     
     finally:
         if server:
@@ -297,16 +337,16 @@ def signup():
         server_thread.daemon = True
         server_thread.start()
 
-        timeout_seconds = 60
+        timeout_seconds = 120  # increase timeout a bit
         start_time = datetime.now()
-        
+
         global received_auth_data
         received_auth_data = {} # Clear any previous data
 
         while (datetime.now() - start_time).total_seconds() < timeout_seconds:
             if received_auth_data:
                 break
-            server_thread.join(1) # Wait 1 second, then check again
+        time.sleep(0.5) # Wait 1 second, then check again
 
     finally:
         if server:
