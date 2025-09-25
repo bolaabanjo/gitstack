@@ -15,13 +15,6 @@ export default function DashboardPage() {
     if (searchParams.get('auth_success') === 'true') {
       toast("Welcome back to Gitstack!", { // <-- Use sonner's toast function
         description: "Your web session is active. Please return to your terminal to continue with Gitstack CLI.",
-        action: {
-            label: "Terminal",
-            onClick: () => {
-                // Optionally, open the terminal or give more explicit instructions
-                console.log("User wants to return to terminal");
-            }
-        },
         duration: 8000, // Show for 8 seconds
       });
       // Optionally, clean the URL param so the toast doesn't show on refresh
