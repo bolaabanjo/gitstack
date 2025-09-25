@@ -24,8 +24,12 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Gitstack: Modern Day Version Control Powerhouse.',
+  title: 'Gitstack',
   description: 'An advanced version control system that versions everything.',
+  icons: {
+    icon: '/fav.png',
+    shortcut: '/fav.png',
+  },
 }
 
 export default function RootLayout({
