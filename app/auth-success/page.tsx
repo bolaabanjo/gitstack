@@ -4,6 +4,16 @@
 import { useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel"; // <-- important type import
+
+
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
+if (!CONVEX_URL) throw new Error("NEXT_PUBLIC_CONVEX_URL is not defined");
+
+const convexClient = new ConvexHttpClient(CONVEX_URL);
+
 
 export default function AuthSuccessPage() {
   const { isLoaded, isSignedIn, sessionId, getToken, userId: clerkAuthUserId } = useAuth();
@@ -27,7 +37,7 @@ export default function AuthSuccessPage() {
 
         const clerkSessionToken = await getToken(); // Get the JWT token
         const clerkUserId = clerkAuthUserId;
-
+        
         if (!clerkSessionToken || !clerkUserId) {
           console.error("AuthSuccessPage: Clerk session token or user ID not found. Redirecting to sign-in.");
           router.push('/sign-in');
@@ -35,7 +45,7 @@ export default function AuthSuccessPage() {
         }
         console.log("AuthSuccessPage: Clerk token and user ID obtained.");
 
-        let convexUserId = null;
+        let convexUserId: Id<"users"> | undefined;
         try {
           console.log("AuthSuccessPage: Calling /api/getConvexUserId with clerkUserId:", clerkUserId);
           const convexUserResponse = await fetch('/api/getConvexUserId', {
@@ -44,6 +54,31 @@ export default function AuthSuccessPage() {
                   'Content-Type': 'application/json',
               },
               body: JSON.stringify({ clerkUserId, clerkSessionToken }),
+          });
+          if (!convexUserResponse.ok) {
+            console.error("Failed to fetch Convex user ID");
+            router.push('/');
+            return;
+          }
+
+          const cliAuthToken = searchParams.get('cli_auth_token');
+          if (!cliAuthToken) {
+            console.error("AuthSuccessPage: Missing cli_auth_token in URL. Cannot complete CLI authentication. Redirecting to home.");
+            router.push('/');
+            return;
+          }
+
+          if (!convexUserId) {
+            console.error("convexUserId is undefined. Aborting CLI auth completion.");
+            router.push('/');
+            return;
+          }
+
+          await convexClient.mutation(api.cliAuth.completeAuthRequest, {
+            cliAuthToken, // pass the token the CLI sent
+            clerkUserId,
+            convexUserId,
+            clerkSessionToken
           });
 
           if (!convexUserResponse.ok) {
