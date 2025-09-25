@@ -7,7 +7,7 @@ export const createOrGetUser = mutation({
   args: {
     clerkUserId: v.string(),
     email: v.string(),
-    name: v.string(),
+    name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Check if this user already exists
