@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 // Make sure these are set in your .env file
-const CONVEX_URL = process.env.CONVEX_URL; // e.g. https://your-deployment.convex.cloud
+const CONVEX_SITE_URL = process.env.CONVEX_SITE_URL; // e.g. https://your-deployment.convex.cloud
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 export async function POST(request: Request) {
   try {
     const { clerkUserId } = await request.json();
 
-    if (!CONVEX_URL || !CLERK_SECRET_KEY) {
+    if (!CONVEX_SITE_URL || !CLERK_SECRET_KEY) {
       return NextResponse.json({ error: "Missing Convex URL or Clerk Secret Key environment variables." }, { status: 500 });
     }
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       format: "json"
     };
 
-    let response = await fetch(`${CONVEX_URL}/api/mutation`, {
+    let response = await fetch(`${CONVEX_SITE_URL}/api/mutation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
       format: "json"
     };
 
-    response = await fetch(`${CONVEX_URL}/api/mutation`, {
+    response = await fetch(`${CONVEX_SITE_URL}/api/mutation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
