@@ -1,4 +1,3 @@
-// app/page.tsx
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from "react";
+import Image from 'next/image';
 
 export default function HomePage() {
   const { resolvedTheme } = useTheme();
@@ -16,7 +16,7 @@ export default function HomePage() {
 
   if (!mounted) {
     // Render nothing or a neutral placeholder until theme is known
-    return <img src="/slight.png" alt="Gitstack Logo" className="h-8 w-auto" />;
+    return <Image src="/slight.png" alt="Gitstack Logo" className="h-8 w-auto" />;
   }
 
   return (
@@ -26,9 +26,23 @@ export default function HomePage() {
       
         <div className="flex items-center space-x-2" suppressHydrationWarning>
         {resolvedTheme === 'dark' ? (
-        <img src="/sdark.png" alt="Gitstack Logo Dark" className="h-8 w-auto" />
+        <Image 
+          src="/sdark.png" 
+          alt="Gitstack Logo Dark" 
+          width={32}
+          height={32}
+          className="h-8 w-auto"
+          priority
+          />
     ) : (
-        <img src="/slight.png" alt="Gitstack Logo Light" className="h-8 w-auto" />
+        <Image 
+        src="/slight.png" 
+        alt="Gitstack Logo Light" 
+        width={32}
+        height={32}
+        className="h-8 w-auto"
+        priority
+        />
     )}
           <span className="text-xl font-black">Gitstack</span>
         </div>
