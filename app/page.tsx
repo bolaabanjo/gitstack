@@ -16,7 +16,14 @@ export default function HomePage() {
 
   if (!mounted) {
     // Render nothing or a neutral placeholder until theme is known
-    return <Image src="/slight.png" alt="Gitstack Logo" className="h-8 w-auto" />;
+    return <Image 
+    src="/slight.png" 
+    alt="Gitstack Logo"
+    width={32}
+    height={32}
+    className="h-8 w-auto"
+    priority
+    />;
   }
 
   return (
