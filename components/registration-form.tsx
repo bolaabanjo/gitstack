@@ -44,13 +44,15 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
         setError("Check your email for a verification link.");
       }
     } catch (err: unknown) {
+      // Normalize err so TypeScript can safely inspect the `errors` property.
+      const maybeErr = err as { errors?: unknown } | null;
       if (
-        typeof err === "object" &&
-        err !== null &&
-        "errors" in err &&
-        Array.isArray((err as any).errors)
+        maybeErr &&
+        typeof maybeErr === "object" &&
+        Array.isArray(maybeErr.errors)
       ) {
-        setError((err as { errors?: { message?: string }[] }).errors?.[0]?.message || "Registration failed. Please try again.");
+        const first = (maybeErr.errors as { message?: string }[])[0];
+        setError(first?.message || "Registration failed. Please try again.");
       } else {
         setError("Registration failed. Please try again.");
       }
@@ -66,7 +68,7 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
         redirectUrl: `${origin}/auth/callback`,
         redirectUrlComplete: `${origin}/`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("SSO failed. Please try again.");
     }
   }

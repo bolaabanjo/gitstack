@@ -55,7 +55,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         redirectUrl: `${origin}/`,
         redirectUrlComplete: `${origin}/`,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("SSO failed. Please try again.");
     }
   }
