@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
+import { ClerkProvider, SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useTheme } from 'next-themes';
@@ -75,12 +75,12 @@ export default function HomePage() {
         {/* Action Buttons (for direct web sign-up/in if not using CLI flow) */}
         <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
         <SignedOut>
-            <SignUpButton mode="modal">
+            <ClerkProvider signUpUrl='/register'>
               <Button className='rounded-full cursor-pointer' size="lg">Sign Up</Button>
-            </SignUpButton>
-            <SignInButton mode="modal">
+            </ClerkProvider>
+            <ClerkProvider signInUrl='/login'>
               <Button variant="outline" className='rounded-full cursor-pointer' size={'lg'}>Sign In</Button>
-            </SignInButton>
+            </ClerkProvider>
           </SignedOut>
           <SignedIn>
             <Link href="/dashboard" passHref>
