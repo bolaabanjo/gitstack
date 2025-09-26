@@ -31,7 +31,7 @@ function AuthSuccessContent() {
         const clerkSessionToken = await getToken();
         const clerkUserId = clerkAuthUserId;
         if (!clerkSessionToken || !clerkUserId) {
-          router.push('/sign-in');
+          router.push('/login');
           return;
         }
 
@@ -91,7 +91,7 @@ function AuthSuccessContent() {
           router.push("/");
         }
       } else if (isLoaded && !isSignedIn) {
-        router.push('/sign-in');
+        router.push('/login');
       }
     }
 

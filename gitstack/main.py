@@ -277,9 +277,9 @@ def login():
 
     redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
 
-    # Construct the URL for the web app's sign-in page
+    # Construct the URL for the web app's login page
     # We pass the redirect_uri to the web app so it knows where to send the user back
-    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-in?redirect_uri={redirect_uri}"
+    auth_url = f"{GITSTACK_WEB_APP_URL}/login?redirect_uri={redirect_uri}"
 
     try:
         webbrowser.open_new_tab(auth_url)
@@ -394,9 +394,9 @@ def signup():
         # not fatal - we still continue, but polling may be unavailable
         click.echo("Warning: could not register CLI auth request in Convex (continuing local flow).")
 
-    # 4) open browser to sign-up URL with redirect_uri and cli_auth_token
-    auth_url = f"{GITSTACK_WEB_APP_URL}/sign-up?redirect_uri={redirect_uri}&cli_auth_token={cli_token}"
-    click.echo(f"Opening browser for signup... (if it doesn't open, visit this URL manually)\n{auth_url}")
+    # 4) open browser to register URL with redirect_uri and cli_auth_token
+    auth_url = f"{GITSTACK_WEB_APP_URL}/register?redirect_uri={redirect_uri}&cli_auth_token={cli_token}"
+    click.echo(f"Opening browser for registration... (if it doesn't open, visit this URL manually)\n{auth_url}")
     try:
         webbrowser.open_new_tab(auth_url)
     except webbrowser.Error:
