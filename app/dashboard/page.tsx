@@ -1,29 +1,30 @@
-// app/dashboard/page.tsx
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from "react";
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner'; // <-- IMPORT toast from 'sonner'
+import { toast } from 'sonner';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { isLoaded, isSignedIn, user } = useUser();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if redirected from a successful authentication flow
     if (searchParams.get('auth_success') === 'true') {
-      toast("Welcome back to Gitstack!", { // <-- Use sonner's toast function
+      toast("Welcome back to Gitstack!", {
         description: "Your web session is active. Please return to your terminal to continue with Gitstack CLI.",
-        duration: 8000, // Show for 8 seconds
+        duration: 8000,
       });
-      // Optionally, clean the URL param so the toast doesn't show on refresh
-      // This is a good practice to prevent the toast from reappearing every time
+
+      // Clean up the URL param
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete('auth_success');
-      window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams.toString()}`);
+      const newUrl = `${window.location.pathname}${
+        newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
+      }`;
+      window.history.replaceState({}, '', newUrl);
     }
-  }, [searchParams]); // Removed 'toast' from dependencies as sonner's toast is globally available
+  }, [searchParams]);
 
   if (!isLoaded) {
     return (
@@ -34,7 +35,6 @@ export default function DashboardPage() {
   }
 
   if (!isSignedIn) {
-    // Should ideally be caught by middleware, but good fallback
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         You must be signed in to view the dashboard.
@@ -47,7 +47,14 @@ export default function DashboardPage() {
       <h1>Gitstack Dashboard</h1>
       {user && <p>Welcome, {user.emailAddresses[0]?.emailAddress || user.id}!</p>}
       <p>This is your personalized Gitstack dashboard.</p>
-      {/* Your dashboard content goes here. The <Toaster /> is now in app/layout.tsx */}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div>Loading dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
