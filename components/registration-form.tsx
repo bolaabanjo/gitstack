@@ -3,16 +3,18 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useSignUp } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
+
 
 export function RegistrationForm({ className, ...props }: React.ComponentProps<"div">) {
-  const { signUp, isLoaded } = useSignUp();
+  const { signUp, setActive, isLoaded } = useSignUp();
   const [email, setEmail] = useState("");
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,13 +37,26 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
     }
     try {
       const result = await signUp.create({ emailAddress: email, password });
-      // Handle result (redirect, etc.)
-    } catch (err: any) {
-      setError(err?.errors?.[0]?.message || "Registration failed. Please try again.");
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/dashboard");
+      } else {
+        setError("Check your email for a verification link.");
+      }
+    } catch (err: unknown) {
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "errors" in err &&
+        Array.isArray((err as any).errors)
+      ) {
+        setError((err as { errors?: { message?: string }[] }).errors?.[0]?.message || "Registration failed. Please try again.");
+      } else {
+        setError("Registration failed. Please try again.");
+      }
     }
     setLoading(false);
   }
-
   async function handleSSO(strategy: "oauth_google" | "oauth_github") {
     if (!isLoaded) return;
     try {
@@ -124,6 +139,7 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
                 onChange={e => setConfirmPassword(e.target.value)}
                 />
             </div>
+            <div id="clerk-captcha" />
             
             {error && (
               <div className="text-red-500 text-sm text-center">{error}</div>

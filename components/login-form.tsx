@@ -8,9 +8,11 @@ import { useSignIn } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +29,20 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       return;
     }
     try {
-      const result = await signIn.create({ identifier: email, password });
-      // Handle result (redirect, etc.)
-    } catch (err: any) {
-      setError(err?.errors?.[0]?.message || "Login failed. Please try again.");
-    }
+      const signInResult = await signIn.create({ identifier: email, password });
+      if (signInResult.status === "complete") {
+        await setActive({ session: signInResult.createdSessionId });
+        router.push("/dashboard");
+      } else {
+        setError("Login incomplete. Please check your credentials or try again.");
+      }
+    } catch (err: unknown) {
+  if (typeof err === "object" && err !== null && "errors" in err) {
+    setError((err as { errors?: { message?: string }[] }).errors?.[0]?.message || "Login failed. Please try again.");
+  } else {
+    setError("Login failed. Please try again.");
+  }
+}
     setLoading(false);
   }
 

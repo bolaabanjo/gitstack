@@ -2,16 +2,8 @@
 
 import { RegistrationForm } from "@/components/registration-form";
 import { ModeToggle } from "@/components/mode-toggle";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 
 export default function RegistrationPage() {
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
- useEffect(() => {
-    setMounted(true);
-  }, []);
 
 
   return (
