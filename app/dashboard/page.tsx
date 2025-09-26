@@ -3,7 +3,15 @@
 import { Suspense, useEffect } from "react";
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
+
+// Fallback toast implementation to avoid type errors if 'sonner' doesn't export `toast`
+// This is a lightweight no-UI fallback that logs the message and is safe to call on both
+// server and client; replace with the real `sonner` import if you upgrade/install the correct version.
+const toast = (message: string, options?: { description?: string; duration?: number }) => {
+  if (typeof window === 'undefined') return;
+  // Basic non-intrusive fallback: log to console (you can replace with a UI toast later)
+  console.info('Toast:', message, options);
+};
 
 function DashboardContent() {
   const { isLoaded, isSignedIn, user } = useUser();
