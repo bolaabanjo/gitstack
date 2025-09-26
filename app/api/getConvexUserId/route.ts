@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // Make sure these are set in your .env file
-const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL; // e.g. https://your-deployment.convex.cloud
+const CONVEX_URL = process.env.CONVEX_SITE_URL; // e.g. https://your-deployment.convex.cloud
 const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 export async function POST(request: Request) {
