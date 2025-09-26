@@ -56,7 +56,7 @@ CLI_DEFAULT_PORT = 8000
 CLI_AUTH_CALLBACK_PATH = "/auth-callback"
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "snapshots.json")
 GITSTACK_WEB_APP_URL = os.getenv("GITSTACK_WEB_APP_URL", "http://localhost:3000")
-CONVEX_URL = os.getenv("CONVEX_URL", "NEXT_PUBLIC_CONVEX_URL")
+CONVEX_SITE_URL = os.getenv("CONVEX_SITE_URL", "NEXT_PUBLIC_CONVEX_URL")
 CONVEX_USE_POLLING = True
 
 # Global store used by handler
@@ -101,7 +101,7 @@ def call_convex_function(function_type, function_name, args=None):
     payload = {"function": function_name, "args": args}
     
     try:
-        response = requests.post(f"{CONVEX_URL}/api/{endpoint}", json=payload, headers=headers)
+        response = requests.post(f"{CONVEX_SITE_URL}/api/{endpoint}", json=payload, headers=headers)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
