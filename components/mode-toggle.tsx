@@ -14,7 +14,7 @@
     } from "@/components/ui/dropdown-menu" // Assuming Shadcn DropdownMenu components
 
     export function ModeToggle() {
-        const { setTheme, theme } = useTheme()
+        const { setTheme } = useTheme()
         if (!setTheme) return null
         
       return (
