@@ -2,15 +2,14 @@ import click
 import os
 import json
 from datetime import datetime, timezone
-import hashlib # Import hashlib for file hashing
+import hashlib
+
+from .snapshots import snap, restore, delete, list_snapshots 
 
 
 from .auth import login, signup, logout
 
 SNAPSHOT_DIR = ".gitstack"
-
-
-
 
 
 
@@ -23,8 +22,8 @@ def main():
 @click.command()
 def make():
     """Initializes a new gitstack repository. Now mainly ensures local dir."""
-    ensure_snapshot_dir()
-    click.echo("Local .gitstack directory ensured.")
+    # This entire block will be moved to utils.py or integrated with other modules later
+    click.echo("Make command (placeholder for now).")
 
 
 @click.command()
@@ -87,7 +86,7 @@ main.add_command(date)
 main.add_command(time)
 main.add_command(make)
 main.add_command(deploy)
-main.add_command(list)
+main.add_command(list_snapshots)
 main.add_command(diff)
 main.add_command(explain)
 main.add_command(push)
