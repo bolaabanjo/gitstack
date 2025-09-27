@@ -161,7 +161,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
         </div>
       </form>
       <div className="text-muted-foreground text-center text-xs mt-4">
-        By clicking continue, you agree to our <a href="#" className="underline underline-offset-4">Terms of Service</a> and <a href="#" className="underline underline-offset-4">Privacy Policy</a>.
+        By clicking continue, you agree to our <a href="/terms" className="underline underline-offset-4">Terms of Service</a> and <a href="/privacy" className="underline underline-offset-4">Privacy Policy</a>.
       </div>
     </div>
   );
