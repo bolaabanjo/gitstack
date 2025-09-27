@@ -90,7 +90,14 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="p-4 text-center text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} Gitstack. All rights reserved.
+        &copy; {new Date().getFullYear()} Gitstack. All rights reserved.{" "}
+        <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
+          Privacy Policy
+        </Link>
+        {" "}
+        <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
+          Terms
+        </Link>
       </footer>
     </div>
   );
