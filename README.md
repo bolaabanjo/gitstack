@@ -1,3 +1,5 @@
+![Project Banner](public/banner.png)
+
 # Gitstack  
 
 **Version everything.**  
