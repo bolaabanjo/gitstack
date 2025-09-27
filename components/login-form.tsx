@@ -49,12 +49,9 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
       } else {
         setError("Login incomplete. Please check your credentials or try again.");
       }
-    } catch (err: any) {
-      if (err?.errors && Array.isArray(err.errors)) {
-        setError(err.errors[0]?.message || "Login failed. Please try again.");
-      } else {
-        setError("Login failed. Please try again.");
-      }
+    } catch (err: unknown) {
+      const firstMessage = (err as { errors?: { message?: string }[] })?.errors?.[0]?.message;
+      setError(firstMessage ?? "Login failed. Please try again.");
     }
     setLoading(false);
   }

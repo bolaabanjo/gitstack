@@ -81,8 +81,8 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
       } else {
         setError("Verification failed. Please check your code and try again.");
       }
-    } catch (err: any) {
-      setError(err?.errors?.[0]?.message || "Verification failed. Please try again.");
+    } catch (err: unknown) {
+      setError((err as { errors?: { message?: string }[] })?.errors?.[0]?.message || "Verification failed. Please try again.");
     }
     setVerifying(false);
   }
