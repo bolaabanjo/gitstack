@@ -93,8 +93,8 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: `${origin}/auth/callback`,
-        redirectUrlComplete: `${origin}/`,
+        redirectUrl: `${origin}/auth-success`,
+        redirectUrlComplete: `${origin}/dashboard`,
       });
     } catch (err: unknown) {
       setError("SSO failed. Please try again.");
