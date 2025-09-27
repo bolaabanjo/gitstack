@@ -10,18 +10,7 @@ from .auth import login, signup, logout
 SNAPSHOT_DIR = ".gitstack"
 
 
-def ensure_snapshot_dir():
-    """Make sure the .gitstack/ folder exists."""
-    if not os.path.exists(SNAPSHOT_DIR):
-        os.makedirs(SNAPSHOT_DIR)
 
-def calculate_file_hash(filepath):
-    """Calculates the SHA256 hash of a given file."""
-    hasher = hashlib.sha256()
-    with open(filepath, 'rb') as f:
-        while chunk := f.read(8192): # Read in 8KB chunks
-            hasher.update(chunk)
-    return hasher.hexdigest()
 
 
 
@@ -50,18 +39,6 @@ def time():
     now = datetime.now(timezone.utc)
     click.echo("Current time (UTC): {}".format(now.time().isoformat()))
 
-
-@click.command()
-def snap():
-    """Captures current code, dependencies, and environment and saves to Convex."""
-    # This entire block will be moved to snapshots.py later
-    click.echo("Snap command (placeholder for now).")
-
-@click.command()
-def delete():
-    """Deletes a snapshot."""
-    # This entire block will be moved to snapshots.py later
-    click.echo("Delete command (placeholder for now).")
 
 
 @click.command()
@@ -99,23 +76,10 @@ def fix():
     click.echo("Suggesting fixes if something breaks after restore... (Convex integration needed)")
     click.echo("What fixes can be suggested?")
 
-
-@click.command()
-def restore():
-        """Restore a snapshot."""
-        # This entire block will be moved to snapshots.py later
-        click.echo("Restore command (placeholder for now).")
-
 @click.command()
 def deploy(): 
     """Deploys code to the cloud"""
     click.echo('Deployment initiated (Convex integration needed)')
-
-@click.command()
-def list():
-        """Lists all saved snapshots."""
-        # This entire block will be moved to snapshots.py later
-        click.echo("List command (placeholder for now).")
 
 main.add_command(snap)
 main.add_command(restore)
