@@ -1,56 +1,27 @@
 # gitstack/snapshots.py
 import click
 import os
-import json
-import hashlib # Needed for calculate_file_hash
-import requests # Moved to top-level import
 from datetime import datetime, timezone
 
-# Import utility functions and constants from other modules
-from .auth import get_authenticated_user_id # To check if user is logged in
-from .config import SNAPSHOT_SCHEMA, CLI_DEFAULT_PORT, CONVEX_SITE_URL, CLERK_SECRET_KEY # Import necessary constants
+# Import constants from config.py
+from .config import SNAPSHOT_SCHEMA
 
-# --- TEMPORARY: These will be moved to utils.py later ---
+# Import utility functions from utils.py
+from .utils import (
+    get_authenticated_user_id,
+    ensure_snapshot_dir,
+    calculate_file_hash,
+    call_convex_function,
+    respond # We'll use this in a later step for standardized responses
+)
 
-# SNAPSHOT_DIR definition - for now, directly used/defined as it's needed by ensure_snapshot_dir
-# and will eventually be moved to config.py
-SNAPSHOT_DIR = ".gitstack"
+# --- DELETE the following duplicated code blocks ---
+# Delete: SNAPSHOT_DIR = ".gitstack"
+# Delete: def ensure_snapshot_dir(): ...
+# Delete: def call_convex_function(...): ...
+# Delete: def calculate_file_hash(...): ...
+# --- END DELETE ---
 
-def ensure_snapshot_dir():
-    """Make sure the .gitstack/ folder exists."""
-    if not os.path.exists(SNAPSHOT_DIR):
-        os.makedirs(SNAPSHOT_DIR)
-
-def call_convex_function(function_type, function_name, args=None):
-    """
-    Helper to call Convex functions.
-    This is a temporary copy from main.py, it will be moved to utils.py later.
-    """
-    if args is None:
-        args = {}
-    
-    headers = {"Content-Type": "application/json"}
-    headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}" # Use imported CLERK_SECRET_KEY
-    
-    endpoint = "mutation" if function_type == "mutation" else "query"
-    payload = {"function": function_name, "args": args}
-    
-    try:
-        response = requests.post(f"{CONVEX_SITE_URL}/api/{endpoint}", json=payload, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error calling Convex function {function_name}: {e}")
-        return None
-
-def calculate_file_hash(filepath):
-    """Calculates the SHA256 hash of a given file."""
-    hasher = hashlib.sha256()
-    with open(filepath, 'rb') as f:
-        while chunk := f.read(8192): # Read in 8KB chunks
-            hasher.update(chunk)
-    return hasher.hexdigest()
-# --- END TEMPORARY ---
 
 @click.command()
 def snap():
