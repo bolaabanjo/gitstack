@@ -12,16 +12,8 @@ from .utils import (
     ensure_snapshot_dir,
     calculate_file_hash,
     call_convex_function,
-    respond # We'll use this in a later step for standardized responses
+    respond # Make sure this is imported
 )
-
-# --- DELETE the following duplicated code blocks ---
-# Delete: SNAPSHOT_DIR = ".gitstack"
-# Delete: def ensure_snapshot_dir(): ...
-# Delete: def call_convex_function(...): ...
-# Delete: def calculate_file_hash(...): ...
-# --- END DELETE ---
-
 
 @click.command()
 def snap():
@@ -29,7 +21,7 @@ def snap():
     ensure_snapshot_dir()
     user_id = get_authenticated_user_id()
     if not user_id:
-        click.echo("You must be logged in to take a snapshot.")
+        respond(False, "You must be logged in to take a snapshot.") # Use respond
         return
 
     files_to_snapshot = []
@@ -45,7 +37,7 @@ def snap():
             "hash": calculate_file_hash(filepath)
         })
 
-    timestamp = datetime.now(timezone.utc).timestamp() * 1000 # Convert to milliseconds for Convex
+    timestamp = datetime.now(timezone.utc).timestamp() * 1000
 
     result = call_convex_function("mutation", "snapshots:createSnapshot", {
         "userId": user_id,
@@ -54,83 +46,108 @@ def snap():
         "fileHashes": file_hashes
     })
     if result:
-        click.echo(f"Snapshot taken and saved to Convex! Snapshot ID: {result['value']}")
+        respond(True, "Snapshot taken and saved to Convex!", {"snapshot_id": result['value']}) # Use respond
     else:
-        click.echo("Failed to take snapshot.")
+        respond(False, "Failed to take snapshot.") # Use respond
 
 @click.command()
-def list_snapshots(): # Renamed from 'list' to avoid conflict with Python's built-in list
+def list_snapshots():
     """Lists all saved snapshots."""
     user_id = get_authenticated_user_id()
     if not user_id:
-        click.echo("You must be logged in to list snapshots.")
+        respond(False, "You must be logged in to list snapshots.") # Use respond
         return
 
     snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data['value']:
-        click.echo("No snapshots found.")
+    if not snapshots_data or not snapshots_data.get('value'):
+        respond(False, "No snapshots found.") # Use respond
         return
 
-    click.echo("Saved snapshots:")
+    formatted_snapshots = []
     for i, snapshot in enumerate(snapshots_data['value']):
         dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        click.echo(f"  {i + 1}: ID: {snapshot['_id']}, Timestamp: {dt_object.isoformat()}")
+        formatted_snapshots.append({
+            "index": i + 1,
+            "id": snapshot['_id'],
+            "timestamp": dt_object.isoformat()
+        })
+    respond(True, "Saved snapshots:", {"snapshots": formatted_snapshots}) # Use respond
 
 @click.command()
 def restore():
     """Restore a snapshot."""
     user_id = get_authenticated_user_id()
     if not user_id:
-        click.echo("You must be logged in to restore a snapshot.")
+        respond(False, "You must be logged in to restore a snapshot.") # Use respond
         return
     
     snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data['value']:
-        click.echo("No snapshots found to restore.")
+    if not snapshots_data or not snapshots_data.get('value'):
+        respond(False, "No snapshots found to restore.") # Use respond
         return
     
-    click.echo("Available snapshots:")
+    formatted_snapshots = []
     for i, snapshot in enumerate(snapshots_data['value']):
         dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        click.echo(f"  {i + 1}: ID: {snapshot['_id']}, Timestamp: {dt_object.isoformat()}")
+        formatted_snapshots.append({
+            "index": i + 1,
+            "id": snapshot['_id'],
+            "timestamp": dt_object.isoformat()
+        })
     
-    snapshot_num = click.prompt("Enter the number of the snapshot to restore", type=int)
+    respond(True, "Available snapshots:", {"snapshots": formatted_snapshots}) # Use respond
+    
+    try:
+        snapshot_num = click.prompt("Enter the number of the snapshot to restore", type=int)
+    except click.exceptions.Abort: # Handle Ctrl+C
+        respond(False, "Restore cancelled by user.")
+        return
+
     if 1 <= snapshot_num <= len(snapshots_data['value']):
         snapshot_to_restore = snapshots_data['value'][snapshot_num - 1]
         
-        click.echo(f"Restoring snapshot from (ID: {snapshot_to_restore['_id']}) from: {datetime.fromtimestamp(snapshot_to_restore['timestamp'] / 1000, tz=timezone.utc).isoformat()}")
-        click.echo("Files included:")
-        for f in snapshot_to_restore["files"]:
-            click.echo(f)
+        respond(True, f"Restoring snapshot (ID: {snapshot_to_restore['_id']}) from: {datetime.fromtimestamp(snapshot_to_restore['timestamp'] / 1000, tz=timezone.utc).isoformat()}", {"snapshot_id": snapshot_to_restore['_id'], "timestamp": snapshot_to_restore['timestamp'], "files": snapshot_to_restore["files"]}) # Use respond
+        
         # TODO: Implement actual file restoration (e.g., download files, overwrite local)
+        respond(True, "File restoration logic is a TODO for now.", {"files_to_restore": snapshot_to_restore["files"]})
     else:
-        click.echo("Invalid snapshot number.")
+        respond(False, "Invalid snapshot number.") # Use respond
 
 @click.command()
 def delete():
     """Deletes a snapshot."""
     user_id = get_authenticated_user_id()
     if not user_id:
-        click.echo("You must be logged in to delete a snapshot.")
+        respond(False, "You must be logged in to delete a snapshot.") # Use respond
         return
 
     snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data['value']:
-        click.echo("No snapshots found to delete.")
+    if not snapshots_data or not snapshots_data.get('value'):
+        respond(False, "No snapshots found to delete.") # Use respond
         return
     
-    click.echo("Available snapshots:")
+    formatted_snapshots = []
     for i, snapshot in enumerate(snapshots_data['value']):
         dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        click.echo(f"  {i + 1}: ID: {snapshot['_id']}, Timestamp: {dt_object.isoformat()}")
+        formatted_snapshots.append({
+            "index": i + 1,
+            "id": snapshot['_id'],
+            "timestamp": dt_object.isoformat()
+        })
+    respond(True, "Available snapshots:", {"snapshots": formatted_snapshots}) # Use respond
     
-    snapshot_num = click.prompt("Enter the number of the snapshot to delete", type=int)
+    try:
+        snapshot_num = click.prompt("Enter the number of the snapshot to delete", type=int)
+    except click.exceptions.Abort: # Handle Ctrl+C
+        respond(False, "Delete cancelled by user.")
+        return
+
     if 1 <= snapshot_num <= len(snapshots_data['value']):
         snapshot_to_delete = snapshots_data['value'][snapshot_num - 1]
         result = call_convex_function("mutation", "snapshots:deleteSnapshot", {"snapshotId": snapshot_to_delete['_id'], "userId": user_id})
         if result is not None:
-            click.echo(f"Snapshot {snapshot_to_delete['_id']} deleted successfully.")
+            respond(True, f"Snapshot {snapshot_to_delete['_id']} deleted successfully.", {"snapshot_id": snapshot_to_delete['_id']}) # Use respond
         else:
-            click.echo("Failed to delete snapshot.")
+            respond(False, "Failed to delete snapshot.", {"snapshot_id": snapshot_to_delete['_id']}) # Use respond
     else:
-        click.echo("Invalid snapshot number.")
+        respond(False, "Invalid snapshot number.") # Use respond
