@@ -1,48 +1,23 @@
 # gitstack/deploy.py
 import click
 import os
-import json
-import hashlib # Needed for calculate_file_hash
 from datetime import datetime, timezone
 
-# Import utility functions and constants from other modules
-from .auth import get_authenticated_user_id # To check if user is logged in
-from .config import DEPLOYMENT_SCHEMA, CONVEX_SITE_URL, CLERK_SECRET_KEY # For validating deployment data
+# Import constants from config.py
+from .config import DEPLOYMENT_SCHEMA
 
-# --- TEMPORARY: These will be moved to utils.py later ---
-# These are copies from main.py / snapshots.py that deploy.py commands will need
-def call_convex_function(function_type, function_name, args=None):
-    """
-    Helper to call Convex functions.
-    This is a temporary copy, it will be moved to utils.py later.
-    """
-    import requests
-    if args is None:
-        args = {}
-    
-    headers = {"Content-Type": "application/json"}
-    headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
-    
-    endpoint = "mutation" if function_type == "mutation" else "query"
-    payload = {"function": function_name, "args": args}
-    
-    try:
-        response = requests.post(f"{CONVEX_SITE_URL}/api/{endpoint}", json=payload, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        click.echo(f"Error calling Convex function {function_name}: {e}")
-        return None
+# Import utility functions from utils.py
+from .utils import (
+    get_authenticated_user_id,
+    calculate_file_hash,
+    call_convex_function,
+    respond # We'll use this in a later step for standardized responses
+)
 
-def calculate_file_hash(filepath):
-    """Calculates the SHA256 hash of a given file."""
-    hasher = hashlib.sha256()
-    with open(filepath, 'rb') as f:
-        while chunk := f.read(8192): # Read in 8KB chunks
-            hasher.update(chunk)
-    return hasher.hexdigest()
-
-# --- END TEMPORARY ---
+# --- DELETE the following duplicated code blocks ---
+# Delete: def call_convex_function(...): ...
+# Delete: def calculate_file_hash(...): ...
+# --- END DELETE ---
 
 @click.command()
 def deploy():
