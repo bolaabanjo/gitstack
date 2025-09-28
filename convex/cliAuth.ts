@@ -8,6 +8,7 @@ export const createAuthRequest = mutation({
     cliAuthToken: v.string(),
     createdAt: v.number(), // timestamp from CLI
   },
+  // Allow unauthenticated access for CLI to create auth request
   handler: async (ctx, args) => {
     // Optional: check if request already exists
     const existing = await ctx.db
@@ -60,6 +61,7 @@ export const getAuthRequestStatus = query({
   args: {
     cliAuthToken: v.string(),
   },
+  // Allow unauthenticated access for CLI to poll auth status
   handler: async (ctx, args) => {
     const request = await ctx.db
       .query("cliAuthRequests")

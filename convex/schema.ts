@@ -38,7 +38,8 @@ export default defineSchema({
     clerkSessionToken: v.optional(v.string()),
     clerkUserId: v.optional(v.string()),
     convexUserId: v.optional(v.string()),
-  }).index("by_cliAuthToken", ["cliAuthToken"]),
+  })
+    .index("by_cliAuthToken", ["cliAuthToken"]), // Corrected: Removed .access()
 
   // Snapshot metadata (one row per snapshot)
   snapshots: defineTable({

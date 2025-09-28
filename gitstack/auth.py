@@ -7,8 +7,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 import threading
 import uuid
-import requests # <--- CORRECTED: Added requests import
-from datetime import datetime, timezone # <--- CORRECTED: Added datetime and timezone import
+import requests
+from datetime import datetime, timezone
 import time as pytime
 
 # Import constants from config.py
@@ -39,13 +39,9 @@ received_auth_data = {}
 expected_cli_token = None
 
 def call_clerk_api(endpoint, method="GET", json_data=None, include_token=False):
-    """
-    Helper to call Clerk API. This remains in auth.py as it's specific to Clerk interaction
-    and directly uses session data functions.
-    """
     headers = {"Content-Type": "application/json"}
     if include_token:
-        session = get_session_data() # Use the centralized utility from utils.py
+        session = get_session_data()
         session_token = session.get("clerk_session_token")
 
         if not session_token:
@@ -53,7 +49,6 @@ def call_clerk_api(endpoint, method="GET", json_data=None, include_token=False):
             return None
         headers["Authorization"] = f"Bearer {session_token}"
     else:
-        # For requests that don't need a user session token but need secret key
         headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
 
     url = f"{CLERK_API_URL}{endpoint}"
@@ -77,10 +72,6 @@ def call_clerk_api(endpoint, method="GET", json_data=None, include_token=False):
 
 
 class CLIAuthHandler(BaseHTTPRequestHandler):
-    """
-    HTTP Handler for the local CLI authentication callback server.
-    This class remains in auth.py as it's directly tied to the authentication flow.
-    """
     def _set_cors_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -262,8 +253,8 @@ def signup():
     try:
         _ = call_convex_function("mutation", "cliAuth:createAuthRequest", {
             "cliAuthToken": cli_token,
-            "requestedAt": int(datetime.now(timezone.utc).timestamp() * 1000)
-        })
+            "createdAt": int(datetime.now(timezone.utc).timestamp() * 1000)
+        }, include_auth_header=False)
     except Exception as e:
         respond(False, "Warning: could not register CLI auth request in Convex (continuing local flow).", {"error": str(e)})
 
@@ -295,7 +286,7 @@ def signup():
 
         if CONVEX_USE_POLLING:
             try:
-                resp = call_convex_function("query", "cliAuth:getAuthRequestStatus", {"cliAuthToken": cli_token})
+                resp = call_convex_function("query", "cliAuth:getAuthRequestStatus", {"cliAuthToken": cli_token}, include_auth_header=False)
                 if resp and resp.get("value") and resp["value"].get("status") == "completed":
                     val = resp["value"]
                     received_auth_data = {
