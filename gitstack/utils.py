@@ -5,16 +5,53 @@ import hashlib
 import socket
 import requests
 import click # For click.echo
-from datetime import datetime, timezone # Needed for call_convex_function/snapshot handling
+from datetime import datetime, timezone
 
 # Import constants from config.py
 from .config import (
     CLI_DEFAULT_PORT,
     CONVEX_SITE_URL,
     CLERK_SECRET_KEY,
-    SNAPSHOT_DIR, # Now importing SNAPSHOT_DIR from config
-    CONVEX_USE_POLLING # For signup logic, will move this constant to config.py
+    SNAPSHOT_DIR,
+    CONVEX_USE_POLLING
 )
+
+# --- Session Management ---
+SESSION_FILE = os.path.join(SNAPSHOT_DIR, "session.json") # Define SESSION_FILE here
+
+def get_session_data():
+    """Retrieves the full session data from the session file."""
+    if os.path.exists(SESSION_FILE):
+        try:
+            with open(SESSION_FILE, "r") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            return {"clerk_session_token": None, "convex_user_id": None, "clerk_user_id": None}
+    return {"clerk_session_token": None, "convex_user_id": None, "clerk_user_id": None}
+
+def save_session_data(clerk_session_token, convex_user_id, clerk_user_id):
+    """Saves the session data to the session file."""
+    # Ensure the snapshot directory exists before saving the session file
+    ensure_snapshot_dir()
+    with open(SESSION_FILE, "w") as f:
+        json.dump({
+            "clerk_session_token": clerk_session_token,
+            "convex_user_id": convex_user_id,
+            "clerk_user_id": clerk_user_id
+        }, f, indent=2)
+
+def clear_session_data():
+    """Clears the session data by deleting the session file."""
+    if os.path.exists(SESSION_FILE):
+        os.remove(SESSION_FILE)
+
+def get_authenticated_user_id():
+    """Retrieves the authenticated Convex user ID from session data."""
+    session = get_session_data()
+    return session.get("convex_user_id")
+
+# --- End Session Management ---
+
 
 def ensure_snapshot_dir():
     """Make sure the .gitstack/ folder exists."""
@@ -25,7 +62,7 @@ def calculate_file_hash(filepath):
     """Calculates the SHA256 hash of a given file."""
     hasher = hashlib.sha256()
     with open(filepath, 'rb') as f:
-        while chunk := f.read(8192): # Read in 8KB chunks
+        while chunk := f.read(8192):
             hasher.update(chunk)
     return hasher.hexdigest()
 
@@ -54,7 +91,6 @@ def call_convex_function(function_type, function_name, args=None):
         args = {}
     
     headers = {"Content-Type": "application/json"}
-    # Assuming CLERK_SECRET_KEY is used for server-to-server calls to Convex
     headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
     
     endpoint = "mutation" if function_type == "mutation" else "query"
@@ -65,7 +101,6 @@ def call_convex_function(function_type, function_name, args=None):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        # We use click.echo here because this is a CLI utility
         click.echo(f"Error calling Convex function {function_name}: {e}")
         return None
 
