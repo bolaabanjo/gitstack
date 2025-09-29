@@ -83,7 +83,7 @@ def pick_available_port(preferred_port=CLI_DEFAULT_PORT):
         s2.close()
         return port
 
-def call_convex_function(function_type, function_name, args=None, include_auth_header=True):
+def call_convex_function(function_type, function_name, args=None):
     """
     Helper to call Convex functions.
     """
@@ -91,8 +91,7 @@ def call_convex_function(function_type, function_name, args=None, include_auth_h
         args = {}
     
     headers = {"Content-Type": "application/json"}
-    if include_auth_header:
-        headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
+    headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
     
     endpoint = "mutation" if function_type == "mutation" else "query"
     payload = {"function": function_name, "args": args}
