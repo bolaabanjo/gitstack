@@ -9,7 +9,7 @@ load_dotenv() # Load environment variables from .env file
 CLI_DEFAULT_PORT = 8000
 SNAPSHOT_DIR = ".gitstack" # Added this
 CONVEX_USE_POLLING = True # Added this
-
+GITSTACK_WEB_APP_URL = "https://gitstack.xyz" 
 # --- Convex Configuration ---
 CONVEX_SITE_URL = os.getenv("CONVEX_SITE_URL")
 CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
