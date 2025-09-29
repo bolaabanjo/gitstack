@@ -94,7 +94,7 @@ def call_convex_function(function_type, function_name, args=None):
     headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
     
     endpoint = "mutation" if function_type == "mutation" else "query"
-    payload = {"function": function_name, "args": args}
+    payload = {"path": function_name, "args": args} # Corrected: 'function' changed to 'path'
     
     try:
         response = requests.post(f"{CONVEX_SITE_URL}/api/{endpoint}", json=payload, headers=headers)
