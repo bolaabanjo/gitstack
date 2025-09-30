@@ -9,7 +9,7 @@ import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
 const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
-if (!CONVEX_URL) throw new Error("CONVEX_SITE_URL is not defined");
+if (!CONVEX_URL) throw new Error("NEXT_PUBLIC_CONVEX_URL is not defined");
 
 const convexClient = new ConvexHttpClient(CONVEX_URL);
 
@@ -87,7 +87,7 @@ function AuthSuccessContent() {
               cli_auth_token: cliAuthToken,
             }),
           });
-          router.push("/dashboard?auth_success=true");
+          router.push("/dashboard");
         } catch {
           router.push("/");
         }
