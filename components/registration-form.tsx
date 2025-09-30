@@ -174,7 +174,7 @@ function RegistrationFormContent({ className, ...props }: React.ComponentProps<"
 
               {error && <div className="text-red-500 text-sm text-center">{error}</div>}
 
-              <Button type="submit" className="w-full h-12 rounded-full" disabled={loading}>
+              <Button type="submit" className="w-full h-12 rounded-full cursor-pointer" disabled={loading}>
                 {loading ? "Registering..." : "Sign Up"}
               </Button>
             </div>
