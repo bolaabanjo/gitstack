@@ -249,7 +249,7 @@ def cli():
 
 
 cli.add_command(signup)
-cli.add_command(login)
+
 
 cli.add_command(whoami)
 
