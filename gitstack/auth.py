@@ -248,7 +248,7 @@ def cli():
     pass
 
 
-cli.add_command(signup)
+
 
 
 cli.add_command(whoami)
