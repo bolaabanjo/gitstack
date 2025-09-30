@@ -224,7 +224,7 @@ def login():
 def logout():
     """Log out and clear all saved session data."""
     clear_session_data()
-    click.echo("👋 Logged out successfully.")
+    click.echo("Logged out successfully.")
 
 
 @click.command()
