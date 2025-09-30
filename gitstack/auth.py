@@ -10,11 +10,14 @@ import threading
 from datetime import datetime
 import time as pytime
 
+# -------------------------
 # Config
+# -------------------------
 CLI_AUTH_CALLBACK_PATH = "/auth-success"
 CLI_AUTH_CALLBACK_PORT = 8000
 SESSION_FILE = os.path.expanduser("~/.gitstack/session.json")
 SERVICE_NAME = "gitstack"
+GITSTACK_WEB_URL = "https://gitstack.xyz"  # Change if you deploy elsewhere
 
 # Try to import keyring (secure storage), auto-install if missing
 try:
@@ -32,8 +35,8 @@ received_auth_data = {}
 # -------------------------
 # Session Handling
 # -------------------------
-def save_session_data(clerk_session_token, convex_user_id, clerk_user_id):
-    """Save session to keyring (preferred) or JSON fallback."""
+def save_session_data(clerk_session_token: str, convex_user_id: str, clerk_user_id: str):
+    """Save session securely using keyring or fallback to JSON."""
     try:
         if keyring:
             keyring.set_password(SERVICE_NAME, "clerk_session_token", clerk_session_token)
@@ -43,7 +46,6 @@ def save_session_data(clerk_session_token, convex_user_id, clerk_user_id):
     except Exception:
         pass
 
-    # fallback JSON
     os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
     with open(SESSION_FILE, "w") as f:
         json.dump(
@@ -57,7 +59,7 @@ def save_session_data(clerk_session_token, convex_user_id, clerk_user_id):
 
 
 def get_session_data():
-    """Retrieve session from keyring or JSON fallback."""
+    """Retrieve session credentials."""
     try:
         if keyring:
             clerk_session_token = keyring.get_password(SERVICE_NAME, "clerk_session_token")
@@ -75,12 +77,11 @@ def get_session_data():
     if os.path.exists(SESSION_FILE):
         with open(SESSION_FILE, "r") as f:
             return json.load(f)
-
     return {}
 
 
 def clear_session_data():
-    """Clear session from both keyring and JSON fallback."""
+    """Log out and clear all session data."""
     try:
         if keyring:
             keyring.delete_password(SERVICE_NAME, "clerk_session_token")
@@ -94,36 +95,70 @@ def clear_session_data():
 
 
 # -------------------------
-# Local Callback Handler
+# Callback Server
 # -------------------------
 class CLIAuthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    """Handles the callback from the web app — now supports POST requests."""
+
+    def do_POST(self):
         global received_auth_data
-        if not self.path.startswith(CLI_AUTH_CALLBACK_PATH):
-            self.send_response(404)
-            self.end_headers()
-            return
+        content_length = int(self.headers.get("Content-Length", 0))
+        post_data = self.rfile.read(content_length)
 
-        qs = parse_qs(urlparse(self.path).query)
-        clerk_session_token = qs.get("clerk_session_token", [None])[0]
-        clerk_user_id = qs.get("clerk_user_id", [None])[0]
-        convex_user_id = qs.get("convex_user_id", [None])[0]
+        try:
+            data = json.loads(post_data)
+            clerk_session_token = data.get("clerk_session_token")
+            clerk_user_id = data.get("clerk_user_id")
+            convex_user_id = data.get("convex_user_id")
 
-        if clerk_session_token and clerk_user_id and convex_user_id:
-            received_auth_data = {
-                "clerk_session_token": clerk_session_token,
-                "clerk_user_id": clerk_user_id,
-                "convex_user_id": convex_user_id,
-            }
-            self.send_response(200)
+            if clerk_session_token and clerk_user_id and convex_user_id:
+                received_auth_data = {
+                    "clerk_session_token": clerk_session_token,
+                    "clerk_user_id": clerk_user_id,
+                    "convex_user_id": convex_user_id,
+                }
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(
+                    b"<html><body><h1>Authentication successful!</h1><p>You may close this tab and return to your terminal.</p></body></html>"
+                )
+            else:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b"Missing required fields in POST data.")
+        except Exception as e:
+            self.send_response(500)
             self.end_headers()
-            self.wfile.write(
-                b"<html><body><h1>Authentication successful! You can close this tab.</h1></body></html>"
-            )
-        else:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"<html><body><h1>Authentication failed.</h1></body></html>")
+            self.wfile.write(f"Server error parsing POST data: {e}".encode())
+
+    def do_GET(self):
+        """Optional: allow GET fallback for testing/debugging."""
+        self.send_response(405)
+        self.end_headers()
+        self.wfile.write(b" Use POST for CLI auth callback.")
+
+
+# -------------------------
+# Auth Helpers
+# -------------------------
+def wait_for_auth(timeout=120):
+    """Wait for the browser to complete authentication."""
+    start_time = datetime.now()
+    click.echo(f"⌛ Waiting for authentication to complete (timeout: {timeout}s)...")
+
+    while (datetime.now() - start_time).total_seconds() < timeout:
+        if received_auth_data:
+            return True
+        pytime.sleep(0.5)
+    return False
+
+
+def start_callback_server():
+    """Start a temporary HTTP server to receive the callback."""
+    server = HTTPServer(("localhost", CLI_AUTH_CALLBACK_PORT), CLIAuthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server
 
 
 # -------------------------
@@ -131,72 +166,50 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
 # -------------------------
 @click.command()
 def signup():
-    """Sign up for Gitstack via browser."""
+    """Sign up for Gitstack from the terminal."""
     global received_auth_data
     received_auth_data = {}
 
     redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
-    auth_url = f"https://gitstack.xyz/register?redirect_uri={redirect_uri}"
+    auth_url = f"{GITSTACK_WEB_URL}/register?redirect_uri={redirect_uri}"
 
-    click.echo("Opening browser for signup...")
+    click.echo("🌐 Opening browser for signup...")
     webbrowser.open_new_tab(auth_url)
 
-    server = HTTPServer(("localhost", CLI_AUTH_CALLBACK_PORT), CLIAuthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-
-    timeout = 120
-    start = datetime.now()
-    click.echo(f"Waiting for signup to complete (timeout in {timeout}s)...")
-
-    while (datetime.now() - start).total_seconds() < timeout:
-        if received_auth_data:
-            break
-        pytime.sleep(0.5)
-
+    server = start_callback_server()
+    success = wait_for_auth(timeout=180)
     server.shutdown()
     server.server_close()
 
-    if received_auth_data:
+    if success:
         save_session_data(
             received_auth_data["clerk_session_token"],
             received_auth_data["convex_user_id"],
             received_auth_data["clerk_user_id"],
         )
-        click.echo("Signed up & logged in successfully!")
+        click.echo("✅ Signed up and authenticated successfully!")
     else:
-        click.echo("Signup failed or timed out.")
+        click.echo("❌ Signup failed or timed out. Please try again.")
 
 
 @click.command()
 def login():
-    """Login to Gitstack via browser."""
+    """Log into your Gitstack account via browser."""
     global received_auth_data
     received_auth_data = {}
 
     redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
-    auth_url = f"https://gitstack.xyz/login?redirect_uri={redirect_uri}"
+    auth_url = f"{GITSTACK_WEB_URL}/login?redirect_uri={redirect_uri}"
 
-    click.echo("Opening browser for login...")
+    click.echo("🌐 Opening browser for login...")
     webbrowser.open_new_tab(auth_url)
 
-    server = HTTPServer(("localhost", CLI_AUTH_CALLBACK_PORT), CLIAuthHandler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-
-    timeout = 60
-    start = datetime.now()
-    click.echo(f"Waiting for login to complete (timeout in {timeout}s)...")
-
-    while (datetime.now() - start).total_seconds() < timeout:
-        if received_auth_data:
-            break
-        pytime.sleep(0.5)
-
+    server = start_callback_server()
+    success = wait_for_auth(timeout=120)
     server.shutdown()
     server.server_close()
 
-    if received_auth_data:
+    if success:
         save_session_data(
             received_auth_data["clerk_session_token"],
             received_auth_data["convex_user_id"],
@@ -209,6 +222,36 @@ def login():
 
 @click.command()
 def logout():
-    """Logout from Gitstack."""
+    """Log out and clear all saved session data."""
     clear_session_data()
-    click.echo("Logged out successfully.")
+    click.echo("👋 Logged out successfully.")
+
+
+@click.command()
+def whoami():
+    """Check which user is currently authenticated."""
+    session = get_session_data()
+    if session:
+        click.echo("   Authenticated session found:")
+        click.echo(f"  Clerk User ID: {session['clerk_user_id']}")
+        click.echo(f"  Convex User ID: {session['convex_user_id']}")
+    else:
+        click.echo("No active session. Try `gitstack login`.")
+
+
+# -------------------------
+# CLI Entrypoint
+# -------------------------
+@click.group()
+def cli():
+    """Gitstack Authentication CLI."""
+    pass
+
+
+cli.add_command(signup)
+cli.add_command(login)
+cli.add_command(logout)
+cli.add_command(whoami)
+
+if __name__ == "__main__":
+    cli()
