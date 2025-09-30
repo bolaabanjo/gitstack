@@ -180,9 +180,12 @@ function RegistrationFormContent({ className, ...props }: React.ComponentProps<"
             </div>
 
             {/* Divider */}
-            <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:border-t">
-              <span className="bg-background text-muted-foreground relative z-10 px-2">Or</span>
-            </div>
+            <div className="relative text-center text-sm my-4">
+            <span className="bg-background text-muted-foreground px-2 z-10 relative">
+              Or
+            </span>
+            <div className="absolute inset-0 top-1/2 border-t border-border z-0" />
+          </div>
 
             {/* SSO Buttons */}
             <div className="grid gap-4 sm:grid-cols-2">
