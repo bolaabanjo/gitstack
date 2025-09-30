@@ -116,7 +116,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
             )}
             <Button
               type="submit"
-              className="w-full h-12 rounded-full"
+              className="w-full h-12 rounded-full cursor-pointer"
               disabled={loading}
             >
               {loading ? "Logging in..." : "Login"}
