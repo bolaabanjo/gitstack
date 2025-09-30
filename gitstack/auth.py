@@ -187,9 +187,9 @@ def signup():
             received_auth_data["convex_user_id"],
             received_auth_data["clerk_user_id"],
         )
-        click.echo("✅ Signed up and authenticated successfully!")
+        click.echo("Signed up and authenticated successfully!")
     else:
-        click.echo("❌ Signup failed or timed out. Please try again.")
+        click.echo("Signup failed or timed out. Please try again.")
 
 
 @click.command()
