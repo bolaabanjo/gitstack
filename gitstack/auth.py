@@ -173,7 +173,7 @@ def signup():
     redirect_uri = f"http://localhost:{CLI_AUTH_CALLBACK_PORT}{CLI_AUTH_CALLBACK_PATH}"
     auth_url = f"{GITSTACK_WEB_URL}/register?redirect_uri={redirect_uri}"
 
-    click.echo("🌐 Opening browser for signup...")
+    click.echo("Opening browser for signup...")
     webbrowser.open_new_tab(auth_url)
 
     server = start_callback_server()
