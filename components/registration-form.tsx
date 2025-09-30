@@ -206,7 +206,7 @@ function RegistrationFormContent({ className, ...props }: React.ComponentProps<"
               <Button
               variant="outline"
               type="button"
-              className="w-full h-12 rounded-full flex items-center justify-center gap-2"
+              className="w-full h-12 rounded-full flex items-center cursor-pointer justify-center gap-2"
               onClick={() => handleSSO("oauth_github")}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={20} height={20}>
