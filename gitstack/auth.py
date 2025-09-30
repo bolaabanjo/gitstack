@@ -13,7 +13,7 @@ import time as pytime
 # -------------------------
 # Config
 # -------------------------
-CLI_AUTH_CALLBACK_PATH = "/auth-success"
+CLI_AUTH_CALLBACK_PATH = "/cli-auth-success"
 CLI_AUTH_CALLBACK_PORT = 8000
 SESSION_FILE = os.path.expanduser("~/.gitstack/session.json")
 SERVICE_NAME = "gitstack"
