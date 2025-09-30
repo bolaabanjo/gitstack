@@ -84,6 +84,7 @@ function AuthSuccessContent() {
               clerk_session_token: clerkSessionToken,
               clerk_user_id: clerkUserId,
               convex_user_id: convexUserId,
+              cli_auth_token: cliAuthToken,
             }),
           });
           router.push("/dashboard?auth_success=true");
