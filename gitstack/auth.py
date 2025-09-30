@@ -144,7 +144,7 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
 def wait_for_auth(timeout=120):
     """Wait for the browser to complete authentication."""
     start_time = datetime.now()
-    click.echo(f"⌛ Waiting for authentication to complete (timeout: {timeout}s)...")
+    click.echo(f"Waiting for authentication to complete (timeout: {timeout}s)...")
 
     while (datetime.now() - start_time).total_seconds() < timeout:
         if received_auth_data:
