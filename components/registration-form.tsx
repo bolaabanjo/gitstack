@@ -238,7 +238,7 @@ function RegistrationFormContent({ className, ...props }: React.ComponentProps<"
               value={verificationCode}
               onChange={e => setVerificationCode(e.target.value)}
             />
-            {error && <div className="text-grey-500 text-sm text-center">{error}</div>}
+            {error && <div className="text-grey-500 text-sm text-center w-full">{error}</div>}
             <Button type="submit" className="h-12 rounded-full max-w-xs" disabled={verifying}>
               {verifying ? "Verifying..." : "Verify Email"}
             </Button>
