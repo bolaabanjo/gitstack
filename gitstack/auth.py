@@ -250,7 +250,7 @@ def cli():
 
 cli.add_command(signup)
 cli.add_command(login)
-cli.add_command(logout)
+
 cli.add_command(whoami)
 
 if __name__ == "__main__":
