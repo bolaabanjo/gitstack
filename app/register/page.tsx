@@ -3,6 +3,7 @@
 import { RegistrationForm } from "@/components/registration-form";
 import { ModeToggle } from "@/components/mode-toggle";
 
+export const dynamic = "force-dynamic";
 export default function RegistrationPage() {
 
 
