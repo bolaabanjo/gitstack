@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export function RegistrationForm({ className, ...props }: React.ComponentProps<"div">) {
   const { signUp, setActive, isLoaded } = useSignUp();
@@ -22,6 +23,11 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
   const [verifying, setVerifying] = useState(false);
   const router = useRouter();
   const { resolvedTheme } = useTheme();
+  const searchParams = useSearchParams();
+  const redirectUri = searchParams.get("redirect_uri");
+  const cliAuthToken = searchParams.get("cli_auth_token");
+  const cliMode = Boolean(redirectUri && cliAuthToken);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,10 +44,18 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
       return;
     }
     try {
+      // The 'result' variable is defined here
       const result = await signUp.create({ emailAddress: email, password });
+
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        router.push("/dashboard");
+        // Now 'result' is defined, so we can safely use result.createdUserId, etc.
+        if (cliMode) {
+          const callbackUrl = `${redirectUri}?clerk_user_id=${result.createdUserId}&clerk_session_token=${result.createdSessionId}&cli_auth_token=${cliAuthToken}`;
+          window.location.href = callbackUrl;
+        } else {
+          router.push("/dashboard");
+        }
       } else if (result.status === "missing_requirements") {
         setVerificationRequired(true);
         setError("Check your email for a verification code and enter it below.");
@@ -93,8 +107,8 @@ export function RegistrationForm({ className, ...props }: React.ComponentProps<"
       const origin = typeof window !== "undefined" ? window.location.origin : "";
       await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: `${origin}/auth-success`,
-        redirectUrlComplete: `${origin}/dashboard`,
+        redirectUrl: `${origin}/auth-success?redirect_uri=${encodeURIComponent(redirectUri || "")}&cli_auth_token=${cliAuthToken || ""}`,
+        redirectUrlComplete: cliMode ? `${redirectUri}?cli_auth_token=${cliAuthToken}` : `${origin}/dashboard`,
       });
     } catch (err: unknown) {
       setError("SSO failed. Please try again.");
