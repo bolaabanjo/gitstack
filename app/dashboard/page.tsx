@@ -116,7 +116,7 @@ function DashboardPageContent() {
       </h1>
       <p className="text-lg text-muted-foreground max-w-3xl">
         Hello, {user?.fullName || user?.emailAddresses[0]?.emailAddress || "Gitstack User"}!
-        Here&apos;s a quick summary of your project's health and recent activity.
+        Here&apos;s a quick summary of your project&apos;s health and recent activity.
       </p>
 
       {/* Render the placeholder components for each section */}
