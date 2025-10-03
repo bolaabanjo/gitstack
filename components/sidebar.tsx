@@ -20,7 +20,7 @@ import {
   GitCompare,
   Sparkles,
   Wrench,
-  Users,
+  Boxes,
   PlusCircle,
   LogOut,
 } from 'lucide-react';
@@ -38,7 +38,7 @@ const IconMap: { [key: string]: React.ElementType } = {
   diff: GitCompare,
   sparkles: Sparkles,
   wrench: Wrench,
-  users: Users,
+  boxes: Boxes,
   camera_plus: PlusCircle,
   logout: LogOut,
 };
@@ -59,7 +59,7 @@ const navGroups = [
     label: "Account",
     items: [
       { id: "settings", label: "Settings", icon: "wrench", route: "/dashboard/settings" },
-      { id: "team", label: "Team", icon: "users", route: "/dashboard/team" },
+      { id: "team", label: "Team", icon: "boxes", route: "/dashboard/team" },
     ],
   },
 ];
