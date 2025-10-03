@@ -6,7 +6,6 @@ import { Suspense, useEffect } from "react";
 import { useUser, UserButton } from '@clerk/nextjs'; // Added UserButton for a full profile experience
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Shadcn Avatar component
 import { Button } from "@/components/ui/button"; // Assuming you have a Shadcn Button component
 import Link from "next/link"; // For navigation buttons
 
@@ -68,13 +67,6 @@ function DashboardContent() {
           Gitstack
         </Link>
         <div className="flex items-center space-x-4">
-          {/* Shadcn Profile Avatar */}
-          {user && (
-            <Avatar className="h-9 w-9">
-              <AvatarImage src={userAvatarUrl} alt={userDisplayName} />
-              <AvatarFallback>{userDisplayName.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-          )}
           {/* Clerk User Button for full profile management */}
           <UserButton afterSignOutUrl="/" />
         </div>
