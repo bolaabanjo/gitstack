@@ -61,16 +61,6 @@ function DashboardContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {/* Header/Navbar */}
-      <header className="flex items-center justify-between p-4 border-b border-border">
-        <Link href="/" className="text-xl font-black text-primary hover:opacity-80 transition-opacity">
-          Gitstack
-        </Link>
-        <div className="flex items-center space-x-4">
-          {/* Clerk User Button for full profile management */}
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </header>
 
       {/* Main Dashboard Content */}
       <main className="flex-grow flex flex-col items-center justify-center p-8 text-center space-y-6">
