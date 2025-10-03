@@ -16,7 +16,7 @@ import {
   Workflow,  // For 'Pull'
   Rocket,    // For 'Deploy'
   Search,
-  Menu,      // For sidebar toggle
+  PanelsTopLeft,      // For sidebar toggle
 } from 'lucide-react';
 
 // Define the interface for Topbar component props
@@ -58,7 +58,7 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
           className="hidden md:flex" // Only show on medium screens and up
           aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          <Menu className="h-5 w-5" />
+          <PanelsTopLeft className="h-5 w-5" />
         </Button>
 
         <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
