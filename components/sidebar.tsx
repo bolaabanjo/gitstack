@@ -72,7 +72,7 @@ export default function Sidebar() {
         <Link href="/dashboard" className="flex items-center space-x-2">
           {/* Using a generic logo here. Replace with your actual /logo.svg */}
           <Image
-            src="/logo.svg" // Make sure you have this image in your public folder
+            src="/sdark.png" // Make sure you have this image in your public folder
             alt="Gitstack Logo"
             width={28}
             height={28}
