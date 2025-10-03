@@ -12,7 +12,7 @@ import { ModeToggle } from '@/components/mode-toggle'; // Theme toggle
 
 // Import Lucide icons based on the UI spec
 import {
-  Upload,    // For 'Push'
+  Waypoints,    // For 'Push'
   Download,  // For 'Pull'
   Rocket,    // For 'Deploy'
   Search,
@@ -95,7 +95,7 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
         {/* Action Buttons */}
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" title="Push local snapshot">
-            <Upload className="h-4 w-4 mr-2" />
+            <Waypoints className="h-4 w-4 mr-2" />
             Push
           </Button>
           <Button variant="ghost" size="sm" title="Pull remote snapshot">
