@@ -1,7 +1,7 @@
 // app/dashboard/projects/page.tsx
 "use client";
 
-import React, { Suspense, useEffect, useState } from 'react'; // Added useState for mounted check
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image'; // Import Image component
 import { useTheme } from 'next-themes'; // Import useTheme hook
@@ -40,9 +40,9 @@ function ProjectsContent() {
   const { resolvedTheme } = useTheme(); // Get the current resolved theme
   const [mounted, setMounted] = useState(false); // State to handle hydration
 
-  // Define empty state illustrations
-  const emptyStateLightIllustration = '/public/imglight.png';
-  const emptyStateDarkIllustration = '/public/imgdark.png';
+  // Define correct paths for empty state illustrations based on your file names
+  const emptyStateLightIllustration = '/imglight.png'; // Corrected path
+  const emptyStateDarkIllustration = '/imgdark.png';   // Corrected path
 
   // Ensure component is mounted before using theme to avoid hydration mismatches
   useEffect(() => {
@@ -79,13 +79,13 @@ function ProjectsContent() {
           src={illustrationSrc}
           alt="No projects yet"
           width={300} // Adjust width as needed
-          height={300} // Adjust height as needed
+          height={200} // Adjust height as needed
           className="mb-4"
           priority // Prioritize loading for better UX
         />
 
         <h1 className="text-4xl font-extrabold tracking-tight">
-          No projects yet. Create your first!
+          No projects yet. Let's create your first!
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl">
           Projects are the core of Gitstack, where you version everything from code to dependencies and datasets.
