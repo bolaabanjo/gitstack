@@ -16,7 +16,14 @@ import {
   Download,  // For 'Pull'
   Rocket,    // For 'Deploy'
   Search,
+  Menu,      // For sidebar toggle
 } from 'lucide-react';
+
+// Define the interface for Topbar component props
+interface TopbarProps {
+  toggleSidebar: () => void;
+  isSidebarCollapsed: boolean;
+}
 
 // Placeholder for Breadcrumb items (will be dynamic later)
 const breadcrumbItems = [
@@ -24,7 +31,8 @@ const breadcrumbItems = [
   { label: "Overview", href: "/dashboard" }, // Current page, no href or currentRoute logic needed here
 ];
 
-// Placeholder for AccountMenu component. For now, we'll combine UserButton and ModeToggle directly.
+// Placeholder for AccountMenu component.
+// It will now receive isSidebarCollapsed to potentially adjust its display if needed.
 function AccountMenu() {
   return (
     <div className="flex items-center space-x-2">
@@ -34,26 +42,41 @@ function AccountMenu() {
   );
 }
 
-export default function Topbar() {
+// Topbar Component
+export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProps) {
   const pathname = usePathname(); // For potential dynamic breadcrumbs or active states
 
   return (
     <div className="flex items-center justify-between h-16 px-4 border-b border-border bg-background text-foreground shadow-sm">
-      {/* Left Section: Breadcrumbs */}
-      <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
-        {breadcrumbItems.map((item, index) => (
-          <React.Fragment key={item.label}>
-            {index > 0 && <span className="text-muted-foreground">/</span>}
-            {item.href ? (
-              <Link href={item.href} className="hover:text-primary transition-colors">
-                {item.label}
-              </Link>
-            ) : (
-              <span className="font-medium text-foreground">{item.label}</span>
-            )}
-          </React.Fragment>
-        ))}
-      </nav>
+      {/* Left Section: Sidebar Toggle & Breadcrumbs */}
+      <div className="flex items-center space-x-3">
+        {/* Sidebar Toggle Button (visible on md screens and up) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleSidebar}
+          className="hidden md:flex" // Only show on medium screens and up
+          aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
+          {breadcrumbItems.map((item, index) => (
+            <React.Fragment key={item.label}>
+              {index > 0 && <span className="text-muted-foreground">/</span>}
+              {item.href ? (
+                <Link href={item.href} className="hover:text-primary transition-colors">
+                  {item.label}
+                </Link>
+              ) : (
+                <span className="font-medium text-foreground">{item.label}</span>
+              )}
+            </React.Fragment>
+          ))}
+        </nav>
+      </div>
+
 
       {/* Middle Section: Search Bar */}
       <div className="flex-1 max-w-sm mx-4">

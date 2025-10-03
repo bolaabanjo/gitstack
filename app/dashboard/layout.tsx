@@ -1,60 +1,65 @@
 // app/dashboard/layout.tsx
 
-"use client"; // This layout will use client-side hooks and interactive components
+"use client";
 
-import React, { useState } from 'react'; // Import useState
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import React, { useState } from 'react';
+import { cn } from '@/lib/utils'; // Assuming this utility for class merging
 
 // Placeholder imports for Sidebar and Topbar components
-// We'll create these files in '@/components/' later
 import Sidebar from '@/components/sidebar';
 import Topbar from '@/components/topbar';
 
-// This layout defines the structure for all pages under the /dashboard route.
-// It implements a two-column layout: a fixed-width sidebar on the left,
-// and a main content area (with a topbar and page-specific content) on the right.
-
-export default function DashboardLayout({
-  children,
-}: {
+interface DashboardLayoutProps {
   children: React.ReactNode;
-}) {
-  const [isCollapsed, setIsCollapsed] = useState(false); // State to manage sidebar collapse
+}
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  // State to manage sidebar collapse/expand status
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Function to toggle the sidebar's collapsed state
+  const toggleSidebar = () => {
+    setIsCollapsed(prev => !prev);
+  };
+
+  // Define fixed widths for the sidebar based on its collapsed state
+  // Tailwind's w-64 is 256px, w-20 is 80px (common values for expanded/collapsed)
+  const sidebarWidthClass = isCollapsed ? 'w-20' : 'w-64';
+
+  // Define the left margin for the main content area to prevent it from
+  // overlapping with the fixed sidebar. This also needs to change with collapse state.
+  const mainContentMarginClass = isCollapsed ? 'ml-20' : 'ml-64';
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal" // Panels are arranged horizontally
-      className="min-h-screen items-stretch" // Ensure it takes full viewport height
-    >
-      {/* Left Panel: Sidebar */}
-      <ResizablePanel
-        defaultSize={15} // Approx. 15% of width, adjust as needed or use minSize/maxSize
-        collapsedSize={3} // Collapsed size (e.g., 3% of width for icons)
-        collapsible={true}
-        minSize={12} // Minimum size to prevent sidebar from becoming too small
-        maxSize={20} // Maximum size to prevent sidebar from becoming too wide
-        onCollapse={() => setIsCollapsed(true)} // Update state on collapse
-        onExpand={() => setIsCollapsed(false)} // Update state on expand
-        className="hidden md:flex flex-col border-r border-border bg-sidebar text-sidebar-foreground" // Apply base styling, hide on small screens
+    <div className="flex min-h-screen">
+      {/* Fixed Sidebar */}
+      <aside
+        className={cn(
+          "fixed top-0 left-0 h-full flex-shrink-0 border-r border-border bg-sidebar text-sidebar-foreground",
+          "transition-all duration-200 ease-in-out", // Smooth transition for width changes
+          sidebarWidthClass, // Apply dynamic width
+          "hidden md:flex flex-col" // Hide on small screens, always a flex column
+        )}
       >
-        <Sidebar isCollapsed={isCollapsed} /> {/* Pass collapsed state to Sidebar */}
-      </ResizablePanel>
+        {/* The Sidebar component receives the collapsed state */}
+        <Sidebar isCollapsed={isCollapsed} />
+      </aside>
 
-      <ResizableHandle withHandle /> {/* Handle to resize the panels */}
-
-      {/* Right Panel: Main Content Area (Topbar + Children) */}
-      <ResizablePanel defaultSize={85}> {/* Remaining width for main content */}
-        <div className="flex flex-col min-h-screen">
-          <Topbar /> {/* Our Topbar component will go here */}
-          <main className="flex-grow p-4 md:p-6 bg-background text-foreground">
-            {children} {/* The actual page content will be rendered here */}
-          </main>
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      {/* Main Content Area */}
+      <div
+        className={cn(
+          "flex flex-col flex-1", // Take remaining width, arrange children vertically
+          mainContentMarginClass, // Apply dynamic left margin
+          "transition-all duration-200 ease-in-out" // Smooth transition for margin changes
+        )}
+      >
+        {/* The Topbar component receives the toggle function and sidebar's collapsed state */}
+        <Topbar toggleSidebar={toggleSidebar} isSidebarCollapsed={isCollapsed} />
+        <main className="flex-grow p-4 md:p-6 bg-background text-foreground overflow-auto">
+          {/* The actual page content will be rendered here */}
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }
