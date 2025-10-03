@@ -19,7 +19,7 @@ import {
   Rocket,
   GitCompare,
   Sparkles,
-  Cog,
+  Wrench,
   Users,
   PlusCircle,
   LogOut,
@@ -37,7 +37,7 @@ const IconMap: { [key: string]: React.ElementType } = {
   rocket: Rocket,
   diff: GitCompare,
   sparkles: Sparkles,
-  cog: Cog,
+  wrench: Wrench,
   users: Users,
   camera_plus: PlusCircle,
   logout: LogOut,
@@ -58,7 +58,7 @@ const navGroups = [
   {
     label: "Account",
     items: [
-      { id: "settings", label: "Settings", icon: "cog", route: "/dashboard/settings" },
+      { id: "settings", label: "Settings", icon: "wrench", route: "/dashboard/settings" },
       { id: "team", label: "Team", icon: "users", route: "/dashboard/team" },
     ],
   },
