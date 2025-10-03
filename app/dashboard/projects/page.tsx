@@ -1,8 +1,10 @@
 // app/dashboard/projects/page.tsx
 "use client";
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react'; // Added useState for mounted check
 import Link from 'next/link';
+import Image from 'next/image'; // Import Image component
+import { useTheme } from 'next-themes'; // Import useTheme hook
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from '@clerk/nextjs';
@@ -35,10 +37,21 @@ function LoadingProjectsSkeleton() {
 function ProjectsContent() {
   const { isLoaded: isUserLoaded, isSignedIn } = useUser();
   const projects = useQuery(api.projects.getProjects);
+  const { resolvedTheme } = useTheme(); // Get the current resolved theme
+  const [mounted, setMounted] = useState(false); // State to handle hydration
+
+  // Define empty state illustrations
+  const emptyStateLightIllustration = '/public/illustration/imglight.png';
+  const emptyStateDarkIllustration = '/public/illustration/imgdark.png';
+
+  // Ensure component is mounted before using theme to avoid hydration mismatches
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handle loading and unauthenticated states
-  if (!isUserLoaded || !isSignedIn || projects === undefined) {
-    return <LoadingProjectsSkeleton />; // Show skeleton while loading user or projects
+  if (!isUserLoaded || !isSignedIn || projects === undefined || !mounted) {
+    return <LoadingProjectsSkeleton />; // Show skeleton while loading user, projects, or mounting
   }
 
   if (!isSignedIn) {
@@ -55,10 +68,24 @@ function ProjectsContent() {
 
   // --- Render based on whether projects exist ---
   if (!projects || projects.length === 0) {
+    const illustrationSrc = resolvedTheme === 'dark'
+      ? emptyStateDarkIllustration
+      : emptyStateLightIllustration;
+
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center space-y-6">
+        {/* Empty State Illustration */}
+        <Image
+          src={illustrationSrc}
+          alt="No projects yet"
+          width={300} // Adjust width as needed
+          height={300} // Adjust height as needed
+          className="mb-4"
+          priority // Prioritize loading for better UX
+        />
+
         <h1 className="text-4xl font-extrabold tracking-tight">
-          No projects yet. Create your first!
+          No projects yet. Let's create your first!
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl">
           Projects are the core of Gitstack, where you version everything from code to dependencies and datasets.
@@ -73,7 +100,7 @@ function ProjectsContent() {
     );
   }
 
-  // --- Render list of projects ---
+  // --- Render list of projects ---\
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -106,7 +133,6 @@ function ProjectsContent() {
                 <p>
                   Last Updated: {formatDistanceToNow(project.updatedAt, { addSuffix: true })}
                 </p>
-                {/* Stats would go here for a richer card */}
                 {project.stats && (
                   <div className="pt-2 text-xs">
                     <p>{project.stats.snapshots} snapshots</p>
