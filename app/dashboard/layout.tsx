@@ -2,7 +2,7 @@
 
 "use client"; // This layout will use client-side hooks and interactive components
 
-import React from 'react';
+import React, { useState } from 'react'; // Import useState
 import {
   ResizableHandle,
   ResizablePanel,
@@ -13,7 +13,6 @@ import {
 // We'll create these files in '@/components/' later
 import Sidebar from '@/components/sidebar';
 import Topbar from '@/components/topbar';
-import { useState } from 'react'; // Import useState
 
 // This layout defines the structure for all pages under the /dashboard route.
 // It implements a two-column layout: a fixed-width sidebar on the left,
@@ -38,11 +37,11 @@ export default function DashboardLayout({
         collapsible={true}
         minSize={12} // Minimum size to prevent sidebar from becoming too small
         maxSize={20} // Maximum size to prevent sidebar from becoming too wide
-        onCollapse={() => setIsCollapsed(true)}
-        onExpand={() => setIsCollapsed(false)}
+        onCollapse={() => setIsCollapsed(true)} // Update state on collapse
+        onExpand={() => setIsCollapsed(false)} // Update state on expand
         className="hidden md:flex flex-col border-r border-border bg-sidebar text-sidebar-foreground" // Apply base styling, hide on small screens
       >
-        <Sidebar /> {/* Our Sidebar component will go here */}
+        <Sidebar isCollapsed={isCollapsed} /> {/* Pass collapsed state to Sidebar */}
       </ResizablePanel>
 
       <ResizableHandle withHandle /> {/* Handle to resize the panels */}
