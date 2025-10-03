@@ -1,3 +1,4 @@
+// app/layout.tsx
 import { type Metadata } from 'next'
 import {
   ClerkProvider,
@@ -6,7 +7,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
-
+import ConvexClientProvider from '@/components/convex-client-provider' // Import the new provider
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -35,24 +36,26 @@ export default function RootLayout({
   return (
     <ClerkProvider
     publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    signInUrl="/login" 
+    signInUrl="/login"
     signUpUrl="/register"
     afterSignInUrl="/dashboard"
     afterSignUpUrl="/dashboard"
     >
-      <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}      >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </body>
-      </html>
+      <ConvexClientProvider> {/* Wrap children with ConvexClientProvider */}
+        <html lang="en" suppressHydrationWarning>
+        <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}      >
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </body>
+        </html>
+      </ConvexClientProvider>
     </ClerkProvider>
   )
 }

@@ -3,35 +3,31 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+// Removed: import { usePathname } from 'next/navigation'; // This import was already removed, confirming no longer needed
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { UserButton } from '@clerk/nextjs'; // Clerk's UserButton for account management
-import { ModeToggle } from '@/components/mode-toggle'; // Theme toggle
+import { UserButton } from '@clerk/nextjs';
+import { ModeToggle } from '@/components/mode-toggle';
 
-// Import Lucide icons based on the UI spec
 import {
-  Waypoints,    // For 'Push'
-  Workflow,  // For 'Pull'
-  Rocket,    // For 'Deploy'
+  Upload,
+  Download,
+  Rocket,
   Search,
-  PanelsTopLeft,      // For sidebar toggle
+  Menu,
 } from 'lucide-react';
 
-// Define the interface for Topbar component props
 interface TopbarProps {
   toggleSidebar: () => void;
   isSidebarCollapsed: boolean;
 }
 
-// Placeholder for Breadcrumb items (will be dynamic later)
 const breadcrumbItems = [
   { label: "Project", href: "/dashboard" },
-  { label: "Overview", href: "/dashboard" }, // Current page, no href or currentRoute logic needed here
+  { label: "Overview", href: "/dashboard" },
 ];
 
-// Placeholder for AccountMenu component.
-// It will now receive isSidebarCollapsed to potentially adjust its display if needed.
 function AccountMenu() {
   return (
     <div className="flex items-center space-x-2">
@@ -41,23 +37,20 @@ function AccountMenu() {
   );
 }
 
-// Topbar Component
 export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProps) {
-  const pathname = usePathname(); // For potential dynamic breadcrumbs or active states
-
+  // Removed: const pathname = usePathname(); // Remove this line
   return (
     <div className="flex items-center justify-between h-16 px-4 border-b border-border bg-background text-foreground shadow-sm">
       {/* Left Section: Sidebar Toggle & Breadcrumbs */}
       <div className="flex items-center space-x-3">
-        {/* Sidebar Toggle Button (visible on md screens and up) */}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleSidebar}
-          className="hidden md:flex" // Only show on medium screens and up
+          className="hidden md:flex"
           aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          <PanelsTopLeft className="h-5 w-5" />
+          <Menu className="h-5 w-5" />
         </Button>
 
         <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -76,7 +69,6 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
         </nav>
       </div>
 
-
       {/* Middle Section: Search Bar */}
       <div className="flex-1 max-w-sm mx-4">
         <div className="relative">
@@ -94,15 +86,15 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
         {/* Action Buttons */}
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" title="Push local snapshot">
-            <Waypoints className="h-4 w-4 mr-2" />
+            <Upload className="h-4 w-4 mr-2" />
             Push
           </Button>
           <Button variant="ghost" size="sm" title="Pull remote snapshot">
-            <Workflow className="h-4 w-4 mr-1" />
+            <Download className="h-4 w-4 mr-2" />
             Pull
           </Button>
           <Button variant="default" size="sm">
-            <Rocket className="h-4 w-4 mr-1" />
+            <Rocket className="h-4 w-4 mr-2" />
             Deploy
           </Button>
         </div>
