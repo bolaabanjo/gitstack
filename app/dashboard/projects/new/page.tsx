@@ -1,7 +1,8 @@
 // app/dashboard/projects/new/page.tsx
+
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState as it's not used directly
 import { useRouter } from 'next/navigation';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -23,11 +24,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, PlusCircle } from 'lucide-react';
-import Link from 'next/link'; // For "Cancel" button
+import { Loader2 } from 'lucide-react'; // Removed PlusCircle as it's not used directly
+import Link from 'next/link';
 
 // --- Form Schema Definition with Zod ---
-// This schema defines the structure and validation rules for our project creation form.
 const projectFormSchema = z.object({
   name: z.string().min(3, { message: "Project name must be at least 3 characters." }).max(50, { message: "Project name cannot exceed 50 characters." }),
   description: z.string().max(200, { message: "Description cannot exceed 200 characters." }).optional(),
@@ -48,7 +48,7 @@ export default function CreateNewProjectPage() {
     defaultValues: {
       name: "",
       description: "",
-      visibility: "private", // Default to private
+      visibility: "private",
     },
   });
 
@@ -57,7 +57,6 @@ export default function CreateNewProjectPage() {
   // --- Form Submission Handler ---
   async function onSubmit(values: ProjectFormValues) {
     try {
-      // Call the Convex mutation to create the project
       const newProjectId = await createProject({
         name: values.name,
         description: values.description,
@@ -68,12 +67,11 @@ export default function CreateNewProjectPage() {
         description: `Project "${values.name}" has been created.`,
       });
 
-      // Redirect to the new project's overview page
       router.push(`/dashboard/projects/${newProjectId}/overview`);
-    } catch (error: any) {
+    } catch (error: unknown) { // Changed 'any' to 'unknown'
       console.error("Failed to create project:", error);
       toast.error("Failed to create project", {
-        description: error.message || "An unexpected error occurred.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.", // Safely access error.message
       });
     }
   }
