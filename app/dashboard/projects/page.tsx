@@ -58,7 +58,7 @@ function ProjectsContent() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center space-y-6">
         <h1 className="text-4xl font-extrabold tracking-tight">
-          No projects yet. Let's create your first!
+          No projects yet. Create your first!
         </h1>
         <p className="text-lg text-muted-foreground max-w-xl">
           Projects are the core of Gitstack, where you version everything from code to dependencies and datasets.

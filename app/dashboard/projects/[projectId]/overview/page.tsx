@@ -127,7 +127,7 @@ function ProjectOverviewPageContent() {
       </h1>
       <p className="text-lg text-muted-foreground max-w-3xl">
         Hello, {user?.fullName || user?.emailAddresses[0]?.emailAddress || "Gitstack User"}!
-        Here's a quick summary of your project's health and recent activity for *{project.name}*.
+        Here&apos;s a quick summary of your project&apos;s health and recent activity for *{project.name}*.
       </p>
 
       {/* Render the placeholder components for each section, now with project context */}
