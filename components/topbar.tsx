@@ -95,7 +95,7 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
         {/* Action Buttons */}
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="sm" title="Push local snapshot">
-            <Waypoints className="h-4 w-4 mr-2" />
+            <Waypoints className="h-4 w-4 mr-1" />
             Push
           </Button>
           <Button variant="ghost" size="sm" title="Pull remote snapshot">
