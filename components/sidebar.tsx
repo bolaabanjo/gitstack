@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'; // Assuming this utility for class merging
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // For user profile
+// Removed: import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // No longer needed
 import { useUser, UserButton } from '@clerk/nextjs'; // For user profile and menu
 
 // Import Lucide icons based on the UI spec
@@ -22,7 +22,7 @@ import {
   Cog,
   Users,
   PlusCircle,
-  LogOut, // For potential logout in profile footer
+  LogOut,
 } from 'lucide-react';
 
 // Define the interface for Sidebar component props
@@ -76,7 +76,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
   };
 
   const userDisplayName = user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
-  const userAvatarUrl = user?.imageUrl;
+  const userEmail = user?.emailAddresses[0]?.emailAddress;
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
@@ -88,7 +88,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
           <Image
             src="/sdark.png" // Using the dark logo as per previous change
             alt="Gitstack Logo"
-            width={isCollapsed ? 28 : 28} // You can adjust collapsed width if needed
+            width={28}
             height={28}
             className="h-7 w-auto"
             priority
@@ -121,12 +121,11 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
                           "w-full justify-start text-sm font-normal py-2 px-2",
                           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                           isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-                          isCollapsed && "justify-center" // Center icon when collapsed
+                          isCollapsed && "justify-center"
                         )}
                       >
                         {IconComponent && <IconComponent className={cn("h-4 w-4", !isCollapsed && "mr-3")} />}
                         {!isCollapsed && item.label}
-                        {/* Optional tooltip for collapsed icons */}
                         {isCollapsed && <span className="sr-only">{item.label}</span>}
                       </Button>
                     </Link>
@@ -151,19 +150,18 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
 
       {/* Profile at the Footer of the Sidebar */}
       {isSignedIn && (
-        <div className={cn("p-4 border-t border-border", isCollapsed ? "flex justify-center" : "flex items-center space-x-3")}>
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={userAvatarUrl} alt={userDisplayName} />
-            <AvatarFallback>{userDisplayName.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+        <div className={cn("p-4 border-t border-border",
+          isCollapsed ? "flex justify-center" : "flex items-center space-x-3"
+        )}>
+          {/* Clerk UserButton: This renders the user's avatar and a dropdown menu */}
+          <UserButton afterSignOutUrl="/" />
+
           {!isCollapsed && (
-            <div className="flex-grow">
+            <div className="flex-grow flex flex-col justify-center">
               <p className="text-sm font-medium leading-none">{userDisplayName}</p>
-              <p className="text-xs text-muted-foreground leading-none">{user?.emailAddresses[0]?.emailAddress}</p>
+              {userEmail && <p className="text-xs text-muted-foreground leading-none">{userEmail}</p>}
             </div>
           )}
-          {/* Clerk UserButton for detailed profile actions */}
-          <UserButton afterSignOutUrl="/" />
         </div>
       )}
     </div>
