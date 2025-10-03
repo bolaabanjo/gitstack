@@ -41,8 +41,8 @@ function ProjectsContent() {
   const [mounted, setMounted] = useState(false); // State to handle hydration
 
   // Define empty state illustrations
-  const emptyStateLightIllustration = '/public/illustration/imglight.png';
-  const emptyStateDarkIllustration = '/public/illustration/imgdark.png';
+  const emptyStateLightIllustration = '/public/imglight.png';
+  const emptyStateDarkIllustration = '/public/imgdark.png';
 
   // Ensure component is mounted before using theme to avoid hydration mismatches
   useEffect(() => {
