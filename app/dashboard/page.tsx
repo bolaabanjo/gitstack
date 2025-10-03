@@ -80,18 +80,6 @@ function DashboardContent() {
           <Button className="mt-6">Create New Project</Button>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="p-4 text-center text-sm text-muted-foreground border-t border-border mt-auto">
-        &copy; {new Date().getFullYear()} Gitstack. All rights reserved.{" "}
-        <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
-          Privacy Policy
-        </Link>
-        {" "}
-        <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
-          Terms
-        </Link>
-      </footer>
     </div>
   );
 }
