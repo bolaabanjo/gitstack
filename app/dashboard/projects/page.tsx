@@ -91,7 +91,7 @@ function ProjectsContent() {
           Projects are the core of Gitstack, where you version everything from code to dependencies and datasets.
         </p>
         <Link href="/dashboard/projects/new" passHref>
-          <Button size="lg" className="flex items-center space-x-2">
+          <Button size="lg" className="flex items-center space-x-2 rounded- full">
             <PlusCircle className="h-5 w-5" />
             <span>Create New Project</span>
           </Button>
