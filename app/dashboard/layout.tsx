@@ -2,64 +2,28 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { cn } from '@/lib/utils'; // Assuming this utility for class merging
-
-// Placeholder imports for Sidebar and Topbar components
-import Sidebar from '@/components/sidebar';
-import Topbar from '@/components/topbar';
+import React from 'react'; // Removed useState as it's no longer used here
+// Removed: import { cn } from '@/lib/utils';
+// Removed: import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+// Removed: import Sidebar from '@/components/sidebar';
+// Removed: import Topbar from '@/components/topbar';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+// This layout now serves as a minimal wrapper for all dashboard routes,
+// providing necessary client-side contexts (e.g., authentication) but
+// NOT dictating the main structural layout (sidebar, topbar).
+// That structural layout is now managed by more specific nested layouts.
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  // State to manage sidebar collapse/expand status
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Function to toggle the sidebar's collapsed state
-  const toggleSidebar = () => {
-    setIsCollapsed(prev => !prev);
-  };
-
-  // Define fixed widths for the sidebar based on its collapsed state
-  // Tailwind's w-64 is 256px, w-20 is 80px (common values for expanded/collapsed)
-  const sidebarWidthClass = isCollapsed ? 'w-20' : 'w-64';
-
-  // Define the left margin for the main content area to prevent it from
-  // overlapping with the fixed sidebar. This also needs to change with collapse state.
-  const mainContentMarginClass = isCollapsed ? 'ml-20' : 'ml-64';
+  // Removed: State and functions for sidebar collapse as they belong in a more specific layout
 
   return (
-    <div className="flex min-h-screen">
-      {/* Fixed Sidebar */}
-      <aside
-        className={cn(
-          "fixed top-0 left-0 h-full flex-shrink-0 border-r border-border bg-sidebar text-sidebar-foreground",
-          "transition-all duration-200 ease-in-out", // Smooth transition for width changes
-          sidebarWidthClass, // Apply dynamic width
-          "hidden md:flex flex-col" // Hide on small screens, always a flex column
-        )}
-      >
-        {/* The Sidebar component receives the collapsed state */}
-        <Sidebar isCollapsed={isCollapsed} />
-      </aside>
-
-      {/* Main Content Area */}
-      <div
-        className={cn(
-          "flex flex-col flex-1", // Take remaining width, arrange children vertically
-          mainContentMarginClass, // Apply dynamic left margin
-          "transition-all duration-200 ease-in-out" // Smooth transition for margin changes
-        )}
-      >
-        {/* The Topbar component receives the toggle function and sidebar's collapsed state */}
-        <Topbar toggleSidebar={toggleSidebar} isSidebarCollapsed={isCollapsed} />
-        <main className="flex-grow p-4 md:p-6 bg-background text-foreground overflow-auto">
-          {/* The actual page content will be rendered here */}
-          {children}
-        </main>
-      </div>
+    <div className="min-h-screen">
+      {/* This layout no longer contains the Sidebar or Topbar. */}
+      {/* It primarily ensures the client-side context for its children. */}
+      {children}
     </div>
   );
 }
