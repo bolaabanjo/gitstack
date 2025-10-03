@@ -36,7 +36,7 @@ const IconMap: { [key: string]: React.ElementType } = {
   camera: Camera,
   rocket: Rocket,
   diff: GitCompare,
-  circuit_board: CircuitBoard,
+  circuitboard: CircuitBoard,
   wrench: Wrench,
   boxes: Boxes,
   camera_plus: PlusCircle,
@@ -52,7 +52,7 @@ const navGroups = [
       { id: "snapshots", label: "Snapshots", icon: "camera", route: "/dashboard/snapshots" },
       { id: "deployments", label: "Deployments", icon: "rocket", route: "/dashboard/deployments" },
       { id: "diffs", label: "Diffs & Changes", icon: "diff", route: "/dashboard/diffs" },
-      { id: "ai", label: "AI Explain", icon: "circuit-board", route: "/dashboard/ai" },
+      { id: "ai", label: "AI Explain", icon: "circuitboard", route: "/dashboard/ai" },
     ],
   },
   {
