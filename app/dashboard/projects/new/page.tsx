@@ -164,7 +164,7 @@ export default function CreateNewProjectPage() {
           />
 
           {/* Submit Button */}
-          <Button type="submit" disabled={isLoading} className="w-full h-10 rounded-full">
+          <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-full">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isLoading ? "Creating Project..." : "Create Project"}
           </Button>
