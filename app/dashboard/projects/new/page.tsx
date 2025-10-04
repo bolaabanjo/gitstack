@@ -79,7 +79,7 @@ export default function CreateNewProjectPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-2xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">Create New Project</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
         <Link href="/dashboard/projects" passHref>
           <Button variant="outline" className='rounded-full'>Cancel</Button>
         </Link>
