@@ -79,7 +79,8 @@ export default function CreateNewProjectPage() {
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-2xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Create New Project</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Create a New Stack</h1>
+        <p>Stacks are just repos that contain a project&apos;s files and version history.</p>
         <Link href="/dashboard/projects" passHref>
           <Button variant="outline" className='rounded-full cursor-pointer'>Cancel</Button>
         </Link>
@@ -93,7 +94,7 @@ export default function CreateNewProjectPage() {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Project Name</FormLabel>
+                <FormLabel>Stack Name</FormLabel>
                 <FormControl>
                   <Input placeholder="My Awesome Project" {...field} />
                 </FormControl>
@@ -114,13 +115,13 @@ export default function CreateNewProjectPage() {
                 <FormLabel>Description</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="A brief description of your project..."
+                    placeholder="A brief description of your stack..."
                     className="resize-y"
                     {...field}
                   />
                 </FormControl>
                 <FormDescription>
-                  A short description helps identify your project.
+                  A short description helps identify your stack.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -133,7 +134,7 @@ export default function CreateNewProjectPage() {
             name="visibility"
             render={({ field }) => (
               <FormItem className="space-y-3">
-                <FormLabel>Project Visibility</FormLabel>
+                <FormLabel>Stack Visibility</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
@@ -145,7 +146,7 @@ export default function CreateNewProjectPage() {
                         <RadioGroupItem value="private" />
                       </FormControl>
                       <FormLabel className="font-normal">
-                        Private (Only you and invited collaborators can see this project)
+                        Private (Only you and invited collaborators can see this stack)
                       </FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-3 space-y-0">
@@ -153,7 +154,7 @@ export default function CreateNewProjectPage() {
                         <RadioGroupItem value="public" />
                       </FormControl>
                       <FormLabel className="font-normal">
-                        Public (Anyone can view this project)
+                        Public (Anyone can view this stack)
                       </FormLabel>
                     </FormItem>
                   </RadioGroup>
@@ -166,7 +167,7 @@ export default function CreateNewProjectPage() {
           {/* Submit Button */}
           <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-full cursor-pointer">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? "Creating Project..." : "Create Project"}
+            {isLoading ? "Creating stack..." : "Create stack"}
           </Button>
         </form>
       </Form>
