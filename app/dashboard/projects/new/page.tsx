@@ -81,7 +81,7 @@ export default function CreateNewProjectPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">Create New Project</h1>
         <Link href="/dashboard/projects" passHref>
-          <Button variant="outline" className=''>Cancel</Button>
+          <Button variant="outline" className='rounded-full'>Cancel</Button>
         </Link>
       </div>
 
