@@ -98,10 +98,10 @@ export default function CreateNewProjectPage() {
               <FormItem>
                 <FormLabel>Stack Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="My Awesome Project" {...field} />
+                  <Input placeholder="My Awesome Stack" {...field} />
                 </FormControl>
                 <FormDescription>
-                  This will be the primary name for your Gitstack project.
+                  This will be the primary name for your stack.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
