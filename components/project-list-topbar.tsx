@@ -26,7 +26,7 @@ export default function ProjectListTopbar({ onSearch }: ProjectListTopbarProps) 
           <Input
             type="search"
             placeholder="Search your projects..."
-            className="w-full pl-9 h-9"
+            className="w-full pl-9 h-14 rounded-full"
             onChange={(e) => onSearch?.(e.target.value)} // Pass search query up
           />
         </div>
