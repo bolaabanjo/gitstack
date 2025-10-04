@@ -4,6 +4,8 @@ dotenv.config(); // Load environment variables from .env file
 
 import express from 'express';
 import { Pool } from 'pg';
+import projectRoutes from './routes/projectRoutes'; // Import our new project routes
+import { setDbPool } from './controllers/projectController';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -18,6 +20,9 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: {
+    rejectUnauthorized: false // Required for Supabase in some environments, adjust for production
+  }
 });
 
 // Test database connection
@@ -37,12 +42,23 @@ pool.connect((err, client, release) => {
   }
 });
 
+setDbPool(pool);
+
 // Basic route
 app.get('/', (req, res) => {
   res.send('Hello from the Gitstack backend!');
 });
 
+app.use('/api/projects', projectRoutes); 
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+});
+
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
+  await pool.end(); // Close the database connection pool
+  console.log('Database connection pool closed.');
+  process.exit(0);
 });

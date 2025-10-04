@@ -2,10 +2,9 @@
 
 "use client";
 
-import React, { useEffect } from 'react'; // Added useEffect for autosave
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { createProject } from '@/lib/api'; // NEW: Import our createProject function
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -26,7 +25,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser } from '@clerk/nextjs'; // Import useUser to get the current user's slug
+import { useUser } from '@clerk/nextjs';
 
 // --- Form Schema Definition with Zod ---
 const projectFormSchema = z.object({
@@ -45,9 +44,8 @@ const AUTOSAVE_KEY = 'newProjectFormDraft';
 
 export default function CreateNewProjectPage() {
   const router = useRouter();
-  const createProject = useMutation(api.projects.createProject);
-  const { user } = useUser(); // Get the current user from Clerk
-  const username = user?.username || 'anonymous'; // Fallback for slug preview
+  const { user } = useUser();
+  const username = user?.username || 'anonymous';
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -58,7 +56,7 @@ export default function CreateNewProjectPage() {
     },
   });
 
-  const isLoading = form.formState.isSubmitting;
+  const [isLoading, setIsLoading] = useState(false); // NEW: Manage loading state locally
 
   // --- Autosave Effect ---
   useEffect(() => {
@@ -88,24 +86,35 @@ export default function CreateNewProjectPage() {
 
   // --- Form Submission Handler ---
   async function onSubmit(values: ProjectFormValues) {
+    if (!user?.id) {
+      toast.error("Authentication required", {
+        description: "Please log in to create a stack.",
+      });
+      return;
+    }
+
+    setIsLoading(true); // Set loading true at the start
     try {
-      const newProjectId = await createProject({
+      const newProject = await createProject({ // UPDATED: Call our new API function
         name: values.name,
         description: values.description,
         visibility: values.visibility,
+        ownerId: user.id, // NEW: Pass Clerk's userId as ownerId
       });
 
       toast.success("Stack created successfully!", {
         description: `Stack "${values.name}" has been created.`,
       });
 
-      localStorage.removeItem(AUTOSAVE_KEY); // Clear draft on successful submission
-      router.push(`/dashboard/projects/${newProjectId}/overview`);
+      localStorage.removeItem(AUTOSAVE_KEY);
+      router.push(`/dashboard/projects/${newProject.id}/overview`); // UPDATED: newProject now has an 'id' property
     } catch (error: unknown) {
       console.error("Failed to create stack:", error);
       toast.error("Failed to create stack", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
+    } finally {
+      setIsLoading(false); // Set loading false at the end
     }
   }
 
