@@ -2,7 +2,7 @@
 
 "use client";
 
-import React from 'react'; // Removed useState as it's not used directly
+import React, { useEffect } from 'react'; // Added useEffect for autosave
 import { useRouter } from 'next/navigation';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
@@ -24,8 +24,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react'; // Removed PlusCircle as it's not used directly
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useUser } from '@clerk/nextjs'; // Import useUser to get the current user's slug
 
 // --- Form Schema Definition with Zod ---
 const projectFormSchema = z.object({
@@ -39,9 +40,14 @@ const projectFormSchema = z.object({
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
 
+// localStorage key for autosave
+const AUTOSAVE_KEY = 'newProjectFormDraft';
+
 export default function CreateNewProjectPage() {
   const router = useRouter();
   const createProject = useMutation(api.projects.createProject);
+  const { user } = useUser(); // Get the current user from Clerk
+  const username = user?.username || 'anonymous'; // Fallback for slug preview
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectFormSchema),
@@ -53,6 +59,32 @@ export default function CreateNewProjectPage() {
   });
 
   const isLoading = form.formState.isSubmitting;
+
+  // --- Autosave Effect ---
+  useEffect(() => {
+    // Load draft from localStorage on mount
+    const savedDraft = localStorage.getItem(AUTOSAVE_KEY);
+    if (savedDraft) {
+      try {
+        const draftValues: ProjectFormValues = JSON.parse(savedDraft);
+        // Only set values that are valid according to the schema
+        form.reset(draftValues);
+      } catch (e) {
+        console.error("Failed to parse autosaved draft:", e);
+        localStorage.removeItem(AUTOSAVE_KEY); // Clear invalid draft
+      }
+    }
+
+    // Subscribe to form changes for autosave
+    const subscription = form.watch((value, { name, type }) => {
+      // Only save if it's a user input change and not the initial load
+      if (type === 'change' && name) {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(value));
+      }
+    });
+
+    return () => subscription.unsubscribe(); // Cleanup subscription
+  }, [form]);
 
   // --- Form Submission Handler ---
   async function onSubmit(values: ProjectFormValues) {
@@ -67,14 +99,24 @@ export default function CreateNewProjectPage() {
         description: `Project "${values.name}" has been created.`,
       });
 
+      localStorage.removeItem(AUTOSAVE_KEY); // Clear draft on successful submission
       router.push(`/dashboard/projects/${newProjectId}/overview`);
-    } catch (error: unknown) { // Changed 'any' to 'unknown'
+    } catch (error: unknown) {
       console.error("Failed to create project:", error);
       toast.error("Failed to create project", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred.", // Safely access error.message
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
     }
   }
+
+  // Calculate character count for description
+  const descriptionCharCount = form.watch("description")?.length || 0;
+
+  // Generate slug preview
+  const projectName = form.watch("name");
+  const projectSlug = projectName ? projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '';
+  const slugPreview = `gitstack.xyz/${username}/${projectSlug}`;
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-2xl">
@@ -100,6 +142,15 @@ export default function CreateNewProjectPage() {
                 <FormControl>
                   <Input placeholder="My Awesome Stack" {...field} />
                 </FormControl>
+                {/* Slug Preview */}
+                {projectName && (
+                  <FormDescription className="flex items-center text-sm text-muted-foreground">
+                    <span className="mr-1">Preview:</span>
+                    <span className="font-mono text-xs bg-muted p-1 rounded-sm">
+                      {slugPreview}
+                    </span>
+                  </FormDescription>
+                )}
                 <FormDescription>
                   This will be the primary name for your stack.
                 </FormDescription>
@@ -122,8 +173,10 @@ export default function CreateNewProjectPage() {
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>
-                  A short description helps identify your stack.
+                {/* Live Character Count */}
+                <FormDescription className="flex justify-between text-muted-foreground">
+                  <span>A short description helps identify your stack.</span>
+                  <span>{descriptionCharCount}/200</span>
                 </FormDescription>
                 <FormMessage />
               </FormItem>
