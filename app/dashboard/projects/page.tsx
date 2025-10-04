@@ -3,8 +3,8 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Import Image component
-import { useTheme } from 'next-themes'; // Import useTheme hook
+// import Image from 'next/image'; // No longer needed for Empty state with icon
+// import { useTheme } from 'next-themes'; // No longer needed for Empty state with icon
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from '@clerk/nextjs';
@@ -12,6 +12,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns'; // For date formatting
+import { IconFolderCode } from "@tabler/icons-react"; // For the Empty component icon
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"; // For the Shadcn Empty state component
 
 // Placeholder for a loading spinner or skeleton
 function LoadingProjectsSkeleton() {
@@ -37,12 +46,8 @@ function LoadingProjectsSkeleton() {
 function ProjectsContent() {
   const { isLoaded: isUserLoaded, isSignedIn } = useUser();
   const projects = useQuery(api.projects.getProjects);
-  const { resolvedTheme } = useTheme(); // Get the current resolved theme
+  // const { resolvedTheme } = useTheme(); // No longer needed
   const [mounted, setMounted] = useState(false); // State to handle hydration
-
-  // Define correct paths for empty state illustrations based on your file names
-  const emptyStateLightIllustration = '/imglight.png'; // Corrected path
-  const emptyStateDarkIllustration = '/imgdark.png';   // Corrected path
 
   // Ensure component is mounted before using theme to avoid hydration mismatches
   useEffect(() => {
@@ -68,39 +73,33 @@ function ProjectsContent() {
 
   // --- Render based on whether projects exist ---
   if (!projects || projects.length === 0) {
-    const illustrationSrc = resolvedTheme === 'dark'
-      ? emptyStateDarkIllustration
-      : emptyStateLightIllustration;
-
+    // Removed illustrationSrc and related logic as we are using an icon
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center space-y-6">
-        {/* Empty State Illustration */}
-        <Image
-          src={illustrationSrc}
-          alt="No projects yet"
-          width={300} // Adjust width as needed
-          height={200} // Adjust height as needed
-          className="mb-4"
-          priority // Prioritize loading for better UX
-        />
-
-        <h1 className="text-4xl font-extrabold tracking-tight">
-          No projects yet. Create your first!
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-xl">
-          Projects are the core of Gitstack, where you version everything from code to dependencies and datasets.
-        </p>
-        <Link href="/dashboard/projects/new" passHref>
-          <Button size="lg" className="flex items-center space-x-2 rounded- full">
-            <PlusCircle className="h-5 w-5" />
-            <span>Create New Project</span>
-          </Button>
-        </Link>
-      </div>
+      <Empty className="h-[calc(100vh-10rem)]"> {/* Added height to make it vertically centered */}
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <IconFolderCode /> {/* Using the icon you suggested */}
+          </EmptyMedia>
+          <EmptyTitle>No Projects Yet</EmptyTitle>
+          <EmptyDescription>
+            You haven&apos;t created any projects yet. Get started by creating
+            your first project.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Link href="/dashboard/projects/new" passHref>
+            <Button size="lg" className="flex items-center space-x-2 rounded-full">
+              <PlusCircle className="h-5 w-5" />
+              <span>Create New Project</span>
+            </Button>
+          </Link>
+        </EmptyContent>
+        {/* Removed "Learn More" link as it wasn't in original logic, but can be added back */}
+      </Empty>
     );
   }
 
-  // --- Render list of projects ---\
+  // --- Render list of projects ---
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
