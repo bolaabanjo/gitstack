@@ -88,7 +88,7 @@ function ProjectsContent() {
         </EmptyHeader>
         <EmptyContent>
           <Link href="/dashboard/projects/new" passHref>
-            <Button size="lg" className="flex items-center space-x-2 rounded-full">
+            <Button size="lg" className="flex items-center cursor-pointer space-x-2 rounded-full">
               <PlusCircle className="h-5 w-5" />
               <span>Create New Project</span>
             </Button>
