@@ -63,7 +63,7 @@ function ProjectsContent() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center">
         <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-        <p className="text-muted-foreground mb-6">You must be signed in to view your projects.</p>
+        <p className="text-muted-foreground mb-6">You must be signed in to view your stacks.</p>
         <Link href="/login" passHref>
           <Button>Sign In</Button>
         </Link>
@@ -80,17 +80,17 @@ function ProjectsContent() {
           <EmptyMedia variant="icon">
             <IconFolderCode /> {/* Using the icon you suggested */}
           </EmptyMedia>
-          <EmptyTitle>No Projects Yet</EmptyTitle>
+          <EmptyTitle>No stacks Yet</EmptyTitle>
           <EmptyDescription>
-            You haven&apos;t created any projects yet. Get started by creating
-            your first project.
+            You haven&apos;t created any stacks yet. Get started by creating
+            your first stack.
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Link href="/dashboard/projects/new" passHref>
             <Button size="lg" className="flex items-center cursor-pointer space-x-2 rounded-full">
               <PlusCircle className="h-5 w-5" />
-              <span>Create New Project</span>
+              <span>Create New Stack</span>
             </Button>
           </Link>
         </EmptyContent>
@@ -103,11 +103,11 @@ function ProjectsContent() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-extrabold tracking-tight">Your Projects</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight">Your Stacks</h1>
         <Link href="/dashboard/projects/new" passHref>
           <Button size="sm" className="flex items-center space-x-2">
             <PlusCircle className="h-4 w-4" />
-            <span>New Project</span>
+            <span>New Stack</span>
           </Button>
         </Link>
       </div>

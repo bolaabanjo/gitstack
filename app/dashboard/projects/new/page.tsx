@@ -95,15 +95,15 @@ export default function CreateNewProjectPage() {
         visibility: values.visibility,
       });
 
-      toast.success("Project created successfully!", {
-        description: `Project "${values.name}" has been created.`,
+      toast.success("Stack created successfully!", {
+        description: `Stack "${values.name}" has been created.`,
       });
 
       localStorage.removeItem(AUTOSAVE_KEY); // Clear draft on successful submission
       router.push(`/dashboard/projects/${newProjectId}/overview`);
     } catch (error: unknown) {
-      console.error("Failed to create project:", error);
-      toast.error("Failed to create project", {
+      console.error("Failed to create stack:", error);
+      toast.error("Failed to create stack", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
     }
