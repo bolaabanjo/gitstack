@@ -62,8 +62,8 @@ function ProjectsContent() {
           const fetchedProjects = await getProjectsByOwner(user.id);
           setProjects(fetchedProjects);
         } catch (err: unknown) {
-          console.error("Failed to fetch projects:", err);
-          setError(err instanceof Error ? err.message : "An unexpected error occurred while fetching projects.");
+          console.error("Failed to fetch stacks:", err);
+          setError(err instanceof Error ? err.message : "An unexpected error occurred while fetching stacks.");
           setProjects([]); // Set to empty array on error
         } finally {
           setLoadingProjects(false);
@@ -98,9 +98,9 @@ function ProjectsContent() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center text-red-500">
-        <h1 className="text-3xl font-bold mb-4">Error Loading Projects</h1>
+        <h1 className="text-3xl font-bold mb-4">Error Loading Stacks</h1>
         <p className="text-muted-foreground mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
+        <Button onClick={() => window.location.reload()} className='rounded-full'>Retry</Button>
       </div>
     );
   }
@@ -113,7 +113,7 @@ function ProjectsContent() {
           <EmptyMedia variant="icon">
             <IconFolderCode />
           </EmptyMedia>
-          <EmptyTitle>No stacks Yet</EmptyTitle>
+          <EmptyTitle>No stacks Yet</EmptyTitle> {/* Changed from No projects Yet to No stacks Yet */}
           <EmptyDescription>
             You haven&apos;t created any stacks yet. Get started by creating
             your first stack.
@@ -123,7 +123,7 @@ function ProjectsContent() {
           <Link href="/dashboard/projects/new" passHref>
             <Button size="lg" className="flex items-center cursor-pointer space-x-2 rounded-full">
               <PlusCircle className="h-5 w-5" />
-              <span>Create New Stack</span>
+              <span>Create New Stack</span> {/* Changed from Create New Project to Create New Stack */}
             </Button>
           </Link>
         </EmptyContent>
@@ -135,11 +135,11 @@ function ProjectsContent() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-extrabold tracking-tight">Your Stacks</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight">Your Stacks</h1> {/* Changed from Projects to Stacks */}
         <Link href="/dashboard/projects/new" passHref>
           <Button size="sm" className="flex items-center space-x-2">
             <PlusCircle className="h-4 w-4" />
-            <span>New Stack</span>
+            <span>New Stack</span> {/* Changed from New Project to New Stack */}
           </Button>
         </Link>
       </div>
