@@ -36,7 +36,8 @@ try:
     import keyring
 except ImportError:
     try:
-        subprocess.check_call([os.sys.executable, "-m", "pip", "install", "keyring"]])
+        # CORRECTED LINE: Removed the extra ']'
+        subprocess.check_call([os.sys.executable, "-m", "pip", "install", "keyring"])
         import keyring
     except Exception:
         keyring = None
@@ -98,7 +99,7 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
         self.wfile.write(b" Use POST for CLI auth callback.")
 
 
-# -------------------------\
+# -------------------------
 # Auth Helpers
 # -------------------------
 def poll_for_auth_status(cli_auth_token, timeout=120):

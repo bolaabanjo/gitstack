@@ -9,8 +9,12 @@ load_dotenv() # Load environment variables from .env file
 CLI_DEFAULT_PORT = 8000
 SNAPSHOT_DIR = ".gitstack"
 GITSTACK_WEB_APP_URL = "https://gitstack.xyz"  # Your deployed frontend URL
-# NEW: Production Backend API Base URL as default, can be overridden by env var
+# Production Backend API Base URL as default, can be overridden by env var
 API_BASE_URL = os.getenv("API_BASE_URL", "https://gitstack-backend-production.up.railway.app/api")
+
+# NEW: Re-added CLI Auth Callback configuration
+CLI_AUTH_CALLBACK_PATH = "/cli-auth-success"
+CLI_AUTH_CALLBACK_PORT = 8000
 
 # --- Shared Schemas ---
 # Defines the structure of data for snapshots
