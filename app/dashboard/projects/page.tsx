@@ -100,7 +100,7 @@ function ProjectsContent() {
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center text-red-500">
         <h1 className="text-3xl font-bold mb-4">Error Loading Stacks</h1>
         <p className="text-muted-foreground mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()} className='rounded-full'>Retry</Button>
+        <Button onClick={() => window.location.reload()} className='rounded-full cursor-pointer'>Retry</Button>
       </div>
     );
   }
