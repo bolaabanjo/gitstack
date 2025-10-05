@@ -1,168 +1,130 @@
 // backend/src/server.ts
-import dotenv from "dotenv";
-dotenv.config();
+import dotenv from 'dotenv';
+dotenv.config(); // Load environment variables from .env file
 
-import express, { Request, Response, NextFunction } from "express";
-import cors from "cors";
-import { Pool } from "pg";
-import projectRoutes from "./routes/projectRoutes";
-import { setDbPool } from "./controllers/projectController";
+import express from 'express';
+import { Pool } from 'pg';
+import cors from 'cors'; // Import cors middleware
 
-// -------------------------
-// Environment Validation
-// -------------------------
-const requiredEnvVars = [
-  "DB_USER",
-  "DB_HOST",
-  "DB_PASSWORD",
-  "DB_NAME",
-  "DB_PORT",
-  "FRONTEND_URL",
-];
-for (const key of requiredEnvVars) {
-  if (!process.env[key]) {
-    console.error(`Missing environment variable: ${key}`);
-    process.exit(1);
-  }
-}
+import projectRoutes from './routes/projectRoutes';
+import userRoutes from './routes/userRoutes'; // NEW: Import user routes
 
-// -------------------------
-// App Setup
-// -------------------------
+import { setDbPool as setProjectDbPool } from './controllers/projectController'; // Renamed import
+import { setDbPool as setUserDbPool } from './controllers/userController';     // NEW: Import and rename
+
 const app = express();
-const PORT = process.env.PORT ?? "5000";
+const port = process.env.PORT || '5000';
+const host = '0.0.0.0'; // Explicitly bind to all network interfaces for container environments
 
-// -------------------------
-// Middleware
-// -------------------------
+// Define allowed origins from an environment variable (comma-separated)
+// Fallback to localhost for local development if FRONTEND_URLS is not set
+const allowedOrigins = process.env.FRONTEND_URLS ?
+  process.env.FRONTEND_URLS.split(',').map(url => url.trim()) :
+  ['http://localhost:3000'];
+
+// CORS configuration - UPDATED to handle multiple origins
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
+    // and requests from explicitly allowed origins.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Origin ${origin} not allowed.`);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+app.use(cors(corsOptions)); // Use CORS middleware
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-// CORS — allow only known origins
-const allowedOrigins = [
-  process.env.FRONTEND_URL, // primary domain
-  "http://localhost:3000", // dev
-  "https://gitstack.vercel.app", // optional preview
-  "https://www.gitstack.xyz", // www variant
-].filter(Boolean);
+// Log environment variables for debugging on Railway
+console.log('--- Backend Environment Variables ---');
+console.log('PORT:', port);
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_PASSWORD:', process.env.DB_PASSWORD ? '********' : 'NOT SET'); // Mask password in logs
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('FRONTEND_URLS:', process.env.FRONTEND_URLS); // UPDATED log
+console.log('Allowed Origins (parsed):', allowedOrigins); // NEW: log parsed origins for verification
+console.log('-----------------------------------');
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`CORS blocked request from origin: ${origin}`);
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
-);
-
-// -------------------------
-// Database Connection
-// -------------------------
+// Set up PostgreSQL connection pool
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT || "5432", 10),
-  ssl: { rejectUnauthorized: false },
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-// Test DB connection immediately on startup
-(async () => {
+// Centralized async startup function
+async function startServer() {
   let client;
   try {
     client = await pool.connect();
-    const result = await client.query("SELECT NOW()");
-    console.log(`✅ Database connected: ${result.rows[0].now}`);
+    await client.query('SELECT NOW()');
+    console.log('Database connected successfully.');
   } catch (err) {
-    console.error("CRITICAL: Failed to connect to database");
-    console.error(err instanceof Error ? err.stack : err);
+    console.error('CRITICAL ERROR: Failed to connect to database. Exiting.', err instanceof Error ? err.stack : err);
     process.exit(1);
   } finally {
-    client?.release();
+    if (client) {
+      client.release();
+    }
   }
-})();
 
-// Share pool with controllers
-setDbPool(pool);
+  // Pass the database pool to *both* controllers after successful connection
+  setProjectDbPool(pool); // UPDATED: Use renamed import
+  setUserDbPool(pool);     // NEW: Pass pool to user controller
 
-// -------------------------
-// Routes
-// -------------------------
-
-// Health check — used by Railway, Vercel, or uptime monitors
-app.get("/health", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "ok",
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
+  // Basic route
+  app.get('/', (req, res) => {
+    res.send('Hello from the Gitstack backend!');
   });
-});
 
-// Root route
-app.get("/", (req: Request, res: Response) => {
-  res.send("Gitstack Backend is running.");
-});
+  // Use NEW user routes first, then project routes
+  app.use('/api/users', userRoutes);   // NEW: Mount user routes
+  app.use('/api/projects', projectRoutes);
 
-// API routes
-app.use("/api/projects", projectRoutes);
-
-// -------------------------
-// 404 Handler
-// -------------------------
-app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    error: "Not Found",
-    message: `The route ${req.originalUrl} does not exist.`,
+  // Basic Error Handling Middleware (must be after all routes)
+  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Error caught by middleware:', err.stack);
+    res.status(500).send('Something broke on the server!');
   });
-});
 
-// -------------------------
-// Global Error Handler
-// -------------------------
-app.use(
-  (err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error("🔥 Unhandled Error:", err.stack || err.message);
-    res.status(500).json({
-      error: "Internal Server Error",
-      message: err.message,
-    });
-  }
-);
+  // Start the server
+  app.listen(parseInt(port, 10), host, () => {
+    console.log(`Server running on port ${port} on host ${host}`);
+  });
+}
 
-// -------------------------
-// Server Start
-// -------------------------
-app.listen(parseInt(PORT, 10), () => {
-  console.log("===================================");
-  console.log(`Gitstack backend running on port ${PORT}`);
-  console.log(`Frontend URL: ${process.env.FRONTEND_URL}`);
-  console.log(`Connected to database: ${process.env.DB_NAME}`);
-  console.log("===================================");
-});
+// Invoke the startup function
+startServer();
 
-// -------------------------
-// Graceful Shutdown
-// -------------------------
-process.on("SIGINT", async () => {
-  console.log("\nShutting down server...");
-  await pool.end();
-  console.log("Database pool closed. Goodbye!");
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
+  await pool.end(); // Close the database connection pool
+  console.log('Database connection pool closed.');
   process.exit(0);
 });
 
-// Catch unhandled rejections
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection:", reason);
+// Catch unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Catch uncaught exceptions
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error.stack || error.message);
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error.stack);
 });

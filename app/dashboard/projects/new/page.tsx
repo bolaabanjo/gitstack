@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createProject } from '@/lib/api'; // NEW: Import our createProject function
+import { createProject, createOrGetUser } from '@/lib/api'; // NEW: Import createOrGetUser
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,11 +29,11 @@ import { useUser } from '@clerk/nextjs';
 
 // --- Form Schema Definition with Zod ---
 const projectFormSchema = z.object({
-  name: z.string().min(3, { message: "Stack name must be at least 3 characters." }).max(50, { message: "Project name cannot exceed 50 characters." }),
+  name: z.string().min(3, { message: "Project name must be at least 3 characters." }).max(50, { message: "Project name cannot exceed 50 characters." }),
   description: z.string().max(200, { message: "Description cannot exceed 200 characters." }).optional(),
   visibility: z
   .enum(["public", "private"])
-  .refine((val) => val, { message: "Stack visibility is required." }),
+  .refine((val) => val, { message: "Project visibility is required." }),
 
 });
 
@@ -56,50 +56,54 @@ export default function CreateNewProjectPage() {
     },
   });
 
-  const [isLoading, setIsLoading] = useState(false); // NEW: Manage loading state locally
+  const [isLoading, setIsLoading] = useState(false);
 
   // --- Autosave Effect ---
   useEffect(() => {
-    // Load draft from localStorage on mount
     const savedDraft = localStorage.getItem(AUTOSAVE_KEY);
     if (savedDraft) {
       try {
         const draftValues: ProjectFormValues = JSON.parse(savedDraft);
-        // Only set values that are valid according to the schema
         form.reset(draftValues);
       } catch (e) {
         console.error("Failed to parse autosaved draft:", e);
-        localStorage.removeItem(AUTOSAVE_KEY); // Clear invalid draft
+        localStorage.removeItem(AUTOSAVE_KEY);
       }
     }
 
-    // Subscribe to form changes for autosave
     const subscription = form.watch((value, { name, type }) => {
-      // Only save if it's a user input change and not the initial load
       if (type === 'change' && name) {
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(value));
       }
     });
 
-    return () => subscription.unsubscribe(); // Cleanup subscription
+    return () => subscription.unsubscribe();
   }, [form]);
 
   // --- Form Submission Handler ---
   async function onSubmit(values: ProjectFormValues) {
-    if (!user?.id) {
+    if (!user?.id || !user.primaryEmailAddress?.emailAddress) {
       toast.error("Authentication required", {
-        description: "Please log in to create a stack.",
+        description: "Please log in with a primary email address to create a project.",
       });
       return;
     }
 
-    setIsLoading(true); // Set loading true at the start
+    setIsLoading(true);
     try {
-      const newProject = await createProject({ // UPDATED: Call our new API function
+      // Step 1: Ensure user exists in our PostgreSQL DB and get their internal UUID
+      const { userId: pgUserId } = await createOrGetUser({
+        clerkUserId: user.id,
+        email: user.primaryEmailAddress.emailAddress,
+        name: user.fullName || user.username || undefined,
+      });
+
+      // Step 2: Create the project using the PostgreSQL user's UUID
+      const newProject = await createProject({
         name: values.name,
         description: values.description,
         visibility: values.visibility,
-        ownerId: user.id, // NEW: Pass Clerk's userId as ownerId
+        ownerId: pgUserId, // UPDATED: Use the PostgreSQL user's UUID here
       });
 
       toast.success("Stack created successfully!", {
@@ -107,14 +111,14 @@ export default function CreateNewProjectPage() {
       });
 
       localStorage.removeItem(AUTOSAVE_KEY);
-      router.push(`/dashboard/projects/${newProject.id}/overview`); // UPDATED: newProject now has an 'id' property
+      router.push(`/dashboard/projects/${newProject.id}/overview`);
     } catch (error: unknown) {
-      console.error("Failed to create stack:", error);
-      toast.error("Failed to create stack", {
+      console.error("Failed to create project:", error);
+      toast.error("Failed to create project", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
     } finally {
-      setIsLoading(false); // Set loading false at the end
+      setIsLoading(false);
     }
   }
 
