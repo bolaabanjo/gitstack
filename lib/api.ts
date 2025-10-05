@@ -16,11 +16,11 @@ export interface Project { // Exported for use in frontend components
   description?: string;
   visibility: 'public' | 'private';
   ownerId: string;
-  createdAt: number;
-  updatedAt: number;
-  statsSnapshots: number;
-  statsDeployments: number;
-  statsLastDeployed?: number;
+  created_at: number; // UPDATED: Changed from createdAt to created_at
+  updated_at: number; // UPDATED: Changed from updatedAt to updated_at
+  stats_snapshots: number; // UPDATED: Changed from statsSnapshots to stats_snapshots
+  stats_deployments: number; // UPDATED: Changed from statsDeployments to stats_deployments
+  stats_last_deployed?: number; // UPDATED: Changed from statsLastDeployed to stats_last_deployed
 }
 
 interface UserData {
