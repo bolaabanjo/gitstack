@@ -3,7 +3,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getProjectsByOwner, Project, createOrGetUser } from '@/lib/api'; // NEW: Import createOrGetUser
+import { getProjectsByOwner, Project, createOrGetUser } from '@/lib/api';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { toast } from 'sonner'; // NEW: Import toast for errors
+import { toast } from 'sonner';
 
 // Placeholder for a loading spinner or skeleton
 function LoadingProjectsSkeleton() {
@@ -55,33 +55,31 @@ function ProjectsContent() {
   useEffect(() => {
     const loadProjects = async () => {
       if (!isUserLoaded || !mounted) {
-        return; // Wait for user data to load and component to mount
+        return;
       }
 
       if (!isSignedIn || !user?.id || !user.primaryEmailAddress?.emailAddress) {
         setLoadingProjects(false);
-        setProjects([]); // No projects if not signed in or user data incomplete
+        setProjects([]);
         return;
       }
 
       setLoadingProjects(true);
       setError(null);
       try {
-        // Step 1: Ensure user exists in our PostgreSQL DB and get their internal UUID
         const { userId: pgUserId } = await createOrGetUser({
           clerkUserId: user.id,
           email: user.primaryEmailAddress.emailAddress,
           name: user.fullName || user.username || undefined,
         });
 
-        // Step 2: Fetch projects using the PostgreSQL user's UUID
-        const fetchedProjects = await getProjectsByOwner(pgUserId); // UPDATED: Use pgUserId
+        const fetchedProjects = await getProjectsByOwner(pgUserId);
         setProjects(fetchedProjects);
       } catch (err: unknown) {
         console.error("Failed to fetch stacks:", err);
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while fetching stacks.";
         setError(errorMessage);
-        toast.error("Error loading stacks", { description: errorMessage }); // Show toast
+        toast.error("Error loading stacks", { description: errorMessage });
         setProjects([]);
       } finally {
         setLoadingProjects(false);
@@ -89,9 +87,8 @@ function ProjectsContent() {
     };
 
     loadProjects();
-  }, [isUserLoaded, isSignedIn, user?.id, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.username, mounted]); // Added new dependencies
+  }, [isUserLoaded, isSignedIn, user?.id, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.username, mounted]);
 
-  // Handle initial loading and unauthenticated states
   if (!isUserLoaded || loadingProjects || !mounted) {
     return <LoadingProjectsSkeleton />;
   }
@@ -108,7 +105,6 @@ function ProjectsContent() {
     );
   }
 
-  // Handle error state
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center text-red-500">
@@ -119,7 +115,6 @@ function ProjectsContent() {
     );
   }
 
-  // --- Render based on whether projects exist ---
   if (!projects || projects.length === 0) {
     return (
       <Empty className="h-[calc(100vh-10rem)]">
@@ -145,7 +140,6 @@ function ProjectsContent() {
     );
   }
 
-  // --- Render list of projects ---
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -173,12 +167,13 @@ function ProjectsContent() {
                   Visibility: <span className="capitalize font-medium">{project.visibility}</span>
                 </p>
                 <p>
-                  Created: {format(project.created_at, 'PP')}
+                  {/* Defensive check for created_at */}
+                  Created: {project.created_at && !isNaN(project.created_at) ? format(project.created_at, 'PP') : 'N/A'}
                 </p>
                 <p>
-                  Last Updated: {formatDistanceToNow(project.updated_at, { addSuffix: true })}
+                  {/* Defensive check for updated_at */}
+                  Last Updated: {project.updated_at && !isNaN(project.updated_at) ? formatDistanceToNow(project.updated_at, { addSuffix: true }) : 'N/A'}
                 </p>
-                {/* Updated to use snake_case for stats fields from backend */}
                 {(project.stats_snapshots !== undefined || project.stats_deployments !== undefined) && (
                   <div className="pt-2 text-xs">
                     {project.stats_snapshots !== undefined && <p>{project.stats_snapshots} snapshots</p>}
@@ -194,7 +189,6 @@ function ProjectsContent() {
   );
 }
 
-// Wrap the content component in Suspense for data fetching.
 export default function ProjectsPage() {
   return (
     <Suspense fallback={<LoadingProjectsSkeleton />}>
