@@ -20,9 +20,12 @@ function OverviewComponentPlaceholder() {
       <h2 className="text-2xl font-semibold mb-4">Project Overview: {project?.name}</h2>
       <p className="text-muted-foreground">This section will display key metrics and summaries for {project?.name}.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div className="p-4 border rounded-md">Snapshots: {project?.stats?.snapshots || 0}</div>
-        <div className="p-4 border rounded-md">Deployments: {project?.stats?.deployments || 0}</div>
-        <div className="p-4 border rounded-md">Last Deployed: {project?.stats?.lastDeployed ? new Date(project.stats.lastDeployed).toLocaleDateString() : 'N/A'}</div>
+        {/* UPDATED: Access stats directly from project object */}
+        <div className="p-4 border rounded-md">Snapshots: {project?.stats_snapshots || 0}</div>
+        <div className="p-4 border rounded-md">Deployments: {project?.stats_deployments || 0}</div>
+        <div className="p-4 border rounded-md">
+          Last Deployed: {project?.stats_last_deployed ? new Date(project.stats_last_deployed).toLocaleDateString() : 'N/A'}
+        </div>
       </div>
     </section>
   );
