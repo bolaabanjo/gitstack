@@ -7,12 +7,10 @@ load_dotenv() # Load environment variables from .env file
 
 # --- CLI Configuration ---
 CLI_DEFAULT_PORT = 8000
-SNAPSHOT_DIR = ".gitstack" # Added this
-CONVEX_USE_POLLING = True # Added this
-GITSTACK_WEB_APP_URL = "https://gitstack.xyz" 
-# --- Convex Configuration ---
-CONVEX_SITE_URL = os.getenv("CONVEX_SITE_URL")
-CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
+SNAPSHOT_DIR = ".gitstack"
+GITSTACK_WEB_APP_URL = "https://gitstack.xyz"  # Your deployed frontend URL
+# NEW: Production Backend API Base URL as default, can be overridden by env var
+API_BASE_URL = os.getenv("API_BASE_URL", "https://gitstack-backend-production.up.railway.app/api")
 
 # --- Shared Schemas ---
 # Defines the structure of data for snapshots

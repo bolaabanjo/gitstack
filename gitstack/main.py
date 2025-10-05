@@ -5,13 +5,13 @@ import json
 from datetime import datetime, timezone
 
 # Import commands from our new modules
-from .auth import login, signup, logout
+from .auth import login, signup, logout, whoami # NEW: Added whoami to imports
 from .snapshots import snap, restore, delete, list_snapshots
 from .deploy import deploy, push, pull, join
 from .ai import explain, fix
 
 # Import utility functions from utils.py for commands that are still placeholders here
-from .utils import ensure_snapshot_dir, respond # <-- Added respond to imports
+from .utils import ensure_snapshot_dir, respond
 
 @click.group()
 def main():
@@ -42,9 +42,12 @@ def diff():
     respond(True, "Comparing two snapshots... (Convex integration needed)") # Use respond
     respond(True, "What changed between snapshots?") # Use respond
 
+# NEW: Add authentication commands to the main group
 main.add_command(login)
 main.add_command(signup)
 main.add_command(logout)
+main.add_command(whoami) # NEW: Added whoami to main commands
+
 main.add_command(snap)
 main.add_command(restore)
 main.add_command(delete)

@@ -6,14 +6,13 @@ import socket
 import requests
 import click # For click.echo
 from datetime import datetime, timezone
+import uuid # For generating CLI auth token
 
 # Import constants from config.py
 from .config import (
     CLI_DEFAULT_PORT,
-    CONVEX_SITE_URL,
-    CLERK_SECRET_KEY,
     SNAPSHOT_DIR,
-    CONVEX_USE_POLLING
+    API_BASE_URL, # NEW: Import API_BASE_URL
 )
 
 # --- Session Management ---
@@ -29,14 +28,15 @@ def get_session_data():
             return {"clerk_session_token": None, "convex_user_id": None, "clerk_user_id": None}
     return {"clerk_session_token": None, "convex_user_id": None, "clerk_user_id": None}
 
-def save_session_data(clerk_session_token, convex_user_id, clerk_user_id):
-    """Saves the session data to the session file."""
+def save_session_data(clerk_session_token, pg_user_id, clerk_user_id):
+    """Saves the session data to the session file.
+    Note: pg_user_id is stored under 'convex_user_id' key for CLI compatibility."""
     # Ensure the snapshot directory exists before saving the session file
     ensure_snapshot_dir()
     with open(SESSION_FILE, "w") as f:
         json.dump({
             "clerk_session_token": clerk_session_token,
-            "convex_user_id": convex_user_id,
+            "convex_user_id": pg_user_id, # Storing pg_user_id here for now
             "clerk_user_id": clerk_user_id
         }, f, indent=2)
 
@@ -46,9 +46,9 @@ def clear_session_data():
         os.remove(SESSION_FILE)
 
 def get_authenticated_user_id():
-    """Retrieves the authenticated Convex user ID from session data."""
+    """Retrieves the authenticated PostgreSQL user ID from session data."""
     session = get_session_data()
-    return session.get("convex_user_id")
+    return session.get("convex_user_id") # Still fetching from 'convex_user_id' key
 
 # --- End Session Management ---
 
@@ -83,25 +83,36 @@ def pick_available_port(preferred_port=CLI_DEFAULT_PORT):
         s2.close()
         return port
 
-def call_convex_function(function_type, function_name, args=None):
+def call_backend_api(method: str, path: str, data: dict = None, params: dict = None):
     """
-    Helper to call Convex functions.
+    Helper to call our Node.js backend API.
     """
-    if args is None:
-        args = {}
-    
+    url = f"{API_BASE_URL}{path}"
     headers = {"Content-Type": "application/json"}
-    headers["Authorization"] = f"Bearer {CLERK_SECRET_KEY}"
     
-    endpoint = "mutation" if function_type == "mutation" else "query"
-    payload = {"path": function_name, "args": args} # Corrected: 'function' changed to 'path'
-    
+    if params:
+        query_string = "&".join([f"{key}={value}" for key, value in params.items()])
+        url = f"{url}?{query_string}"
+
     try:
-        response = requests.post(f"{CONVEX_SITE_URL}/api/{endpoint}", json=payload, headers=headers)
-        response.raise_for_status()
+        if method.upper() == "GET":
+            response = requests.get(url, headers=headers)
+        elif method.upper() == "POST":
+            response = requests.post(url, headers=headers, json=data)
+        # Add other HTTP methods as needed (PUT, DELETE)
+        else:
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
+        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
         return response.json()
     except requests.exceptions.RequestException as e:
-        click.echo(f"Error calling Convex function {function_name}: {e}")
+        click.echo(f"Error calling backend API {url} ({method}): {e}")
+        if hasattr(e, 'response') and e.response is not None:
+            try:
+                error_detail = e.response.json()
+                click.echo(f"Backend error details: {json.dumps(error_detail, indent=2)}")
+            except json.JSONDecodeError:
+                click.echo(f"Backend responded with: {e.response.text}")
         return None
 
 def respond(success, message, data=None):

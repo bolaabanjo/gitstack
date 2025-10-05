@@ -1,120 +1,160 @@
-// app/auth-success/page.tsx
-
+// app/cli-auth-success/page.tsx
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useAuth, useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation'; // Removed useSearchParams as it's not needed here
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  createOrGetUser,
+  completeCliAuthRequest,
+} from '@/lib/api'; // Import the new API functions
+import { toast } from 'sonner';
 
-// This page handles successful web authentication (login/signup) and
-// ensures the user has a corresponding record in Convex, then redirects to the dashboard.
-// All CLI-specific authentication logic has been moved to app/cli-auth-success/page.tsx.
-
-function AuthSuccessContent() {
+function CliAuthSuccessContent() {
   const { isLoaded, isSignedIn, sessionId, getToken, userId: clerkAuthUserId } = useAuth();
   const { user } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Processing CLI authentication...');
 
   useEffect(() => {
-    async function handleWebAuthSuccess() {
-      // 1. Ensure Clerk user data is loaded and the user is signed in.
+    async function handleCliAuthSuccess() {
+      const redirectUri = searchParams.get('redirect_uri');
+      const cliAuthToken = searchParams.get('cli_auth_token'); // Assuming CLI passes this
+
+      if (!redirectUri || !cliAuthToken) {
+        setStatus('error');
+        setMessage('Missing redirect_uri or cli_auth_token in URL.');
+        toast.error('CLI Auth Error', { description: 'Missing redirect_uri or cli_auth_token.' });
+        return;
+      }
+
+      // Phase 1: Ensure Clerk user data is loaded and the user is signed in.
       if (!isLoaded || !isSignedIn || !sessionId || !user || !clerkAuthUserId) {
-        // If not signed in or data not loaded, redirect to login.
-        // This acts as a safeguard; Clerk's configuration in layout.tsx should
-        // ideally handle redirects for unauthenticated users directly.
         if (isLoaded && !isSignedIn) {
-          router.push('/login');
+          // If Clerk is loaded but user is not signed in, redirect to login with original params
+          router.push(`/login?${searchParams.toString()}`);
+        } else {
+          setMessage('Waiting for user authentication...');
         }
         return;
       }
 
-      // 2. Obtain Clerk session token.
-      const clerkSessionToken = await getToken();
-      if (!clerkSessionToken) {
-        console.error("Clerk session token not available after successful authentication.");
-        router.push('/login'); // Should not happen, but as a safeguard
-        return;
-      }
-
-      // 3. Ensure the user has a corresponding Convex user ID.
-      // This is a crucial step to link Clerk users to our Convex backend.
-      // We'll call an API route (e.g., `/api/getConvexUserId`) that
-      // either retrieves the existing Convex user ID or creates a new one
-      // based on the Clerk user ID.
       try {
-        const convexUserResponse = await fetch('/api/getConvexUserId', {
+        // 2. Obtain Clerk session token.
+        const clerkSessionToken = await getToken();
+        if (!clerkSessionToken) {
+          throw new Error("Clerk session token not available.");
+        }
+
+        // 3. Create or fetch our internal PostgreSQL user ID
+        const userEmail = user.emailAddresses?.[0]?.emailAddress;
+        if (!userEmail) {
+          throw new Error("Clerk user email not found.");
+        }
+
+        const pgUserResponse = await createOrGetUser({
+          clerkUserId: clerkAuthUserId,
+          email: userEmail,
+          name: user.fullName || user.username || undefined,
+        });
+        const pgUserId = pgUserResponse.userId; // Our internal PostgreSQL UUID
+
+        if (!pgUserId) {
+          throw new Error("PostgreSQL user ID not returned by API.");
+        }
+
+        // 4. Complete the CLI auth request on our backend
+        await completeCliAuthRequest({
+          cliAuthToken,
+          clerkUserId: clerkAuthUserId,
+          pgUserId,
+          clerkSessionToken,
+        });
+
+        // 5. Post data back to the CLI's local server
+        const cliCallbackResponse = await fetch(redirectUri, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
-            clerkUserId: clerkAuthUserId,
-            clerkSessionToken: clerkSessionToken,
+            clerk_session_token: clerkSessionToken,
+            clerk_user_id: clerkAuthUserId,
+            convex_user_id: pgUserId, // CLI still expects 'convex_user_id' for now
           }),
         });
 
-        if (!convexUserResponse.ok) {
-          console.error("Failed to get/create Convex user ID:", convexUserResponse.statusText);
-          router.push('/'); // Redirect to home or an error page if Convex user linking fails
-          return;
+        if (!cliCallbackResponse.ok) {
+          throw new Error(`CLI callback failed: ${cliCallbackResponse.statusText}`);
         }
 
-        const convexUser = await convexUserResponse.json();
-        if (!convexUser || !convexUser.convexUserId) {
-          console.error("Convex user ID not returned by API.");
-          router.push('/'); // Redirect if response is invalid
-          return;
-        }
+        setStatus('success');
+        setMessage('Authentication successful! You can now return to your terminal.');
+        toast.success('CLI Authentication', { description: 'You are now authenticated with Gitstack CLI!' });
 
-        // At this point, the web authentication is complete,
-        // and the user's Clerk ID is linked to a Convex user ID.
-        // We can now safely redirect them to the dashboard.
-        router.push('/dashboard');
+        // Optionally redirect to dashboard after a short delay or just stay on this success page
+        // setTimeout(() => router.push('/dashboard'), 3000);
 
       } catch (error) {
-        console.error("Error during Convex user ID linking:", error);
-        router.push('/'); // Redirect to home or an error page on API call failure
+        console.error("Error during CLI authentication flow:", error);
+        setStatus('error');
+        setMessage(`Authentication failed: ${(error as Error).message}. Please try again from the CLI.`);
+        toast.error('CLI Auth Failed', { description: (error as Error).message });
+        router.push('/login'); // Redirect to login on error
       }
     }
 
-    // Only run this effect if Clerk data is loaded and the user is signed in.
-    // The `sessionId` and `user` checks provide further assurance.
     if (isLoaded && isSignedIn && sessionId && user && clerkAuthUserId) {
-        handleWebAuthSuccess();
+      handleCliAuthSuccess();
     } else if (isLoaded && !isSignedIn) {
-        // If Clerk is loaded but user is not signed in, redirect to login.
-        router.push('/login');
+      // If Clerk is loaded but user is not signed in, ensure redirect to login
+      const currentPath = window.location.pathname;
+      const currentSearchParams = window.location.search;
+      if (!currentPath.startsWith('/login')) { // Avoid infinite redirects
+        router.push(`/login${currentSearchParams}`);
+      }
     }
 
-  }, [isLoaded, isSignedIn, sessionId, user, clerkAuthUserId, getToken, router]); // Dependency array
+  }, [isLoaded, isSignedIn, sessionId, user, clerkAuthUserId, getToken, router, searchParams]);
 
-  // --- Render content while processing ---
-  // A simple loading message or a null value is sufficient as this page's
-  // sole purpose is to process and redirect.
-  if (!isLoaded || !isSignedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
-        <p>Loading authentication status...</p>
-      </div>
-    );
-  }
 
-  // If signed in, we are processing and will redirect soon.
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
-      <h1 className="text-2xl font-bold">Authentication Successful!</h1>
-      <p>Redirecting you to the dashboard...</p>
+      {status === 'loading' && (
+        <>
+          <h1 className="text-2xl font-bold">Processing CLI Authentication...</h1>
+          <p>{message}</p>
+        </>
+      )}
+      {status === 'success' && (
+        <>
+          <h1 className="text-2xl font-bold text-green-500">CLI Authentication Successful!</h1>
+          <p>{message}</p>
+          <p className="mt-4">You may now close this browser tab.</p>
+        </>
+      )}
+      {status === 'error' && (
+        <>
+          <h1 className="text-2xl font-bold text-red-500">CLI Authentication Failed</h1>
+          <p>{message}</p>
+          <p className="mt-4">Please return to your terminal and try logging in again.</p>
+        </>
+      )}
     </div>
   );
 }
 
-// Wrap the content component in Suspense for potential async operations within.
-export default function AuthSuccessPage() {
+export default function CliAuthSuccessPage() {
   return (
     <Suspense fallback={
         <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-background text-foreground">
-            <p>Loading...</p>
+            <p>Loading CLI authentication page...</p>
         </div>
     }>
-      <AuthSuccessContent />
+      <CliAuthSuccessContent />
     </Suspense>
   );
 }

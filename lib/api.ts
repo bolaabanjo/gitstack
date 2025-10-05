@@ -33,6 +33,31 @@ interface UserResponse {
   userId: string; // This is the PostgreSQL UUID
 }
 
+// NEW: Interfaces for CLI Authentication
+export interface CliAuthRequestData {
+  cliAuthToken: string;
+  createdAt: number;
+}
+
+export interface CliAuthCompletionData {
+  cliAuthToken: string;
+  clerkUserId: string;
+  pgUserId: string; // The PostgreSQL UUID for the user
+  clerkSessionToken: string;
+}
+
+export interface CliAuthStatus {
+  id?: string;
+  cli_auth_token: string;
+  status: 'pending' | 'completed' | 'failed' | 'not_found';
+  clerk_user_id?: string;
+  pg_user_id?: string; // Mapped from convex_user_id in DB
+  clerk_session_token?: string;
+  created_at?: number;
+  completed_at?: number;
+  message?: string; // For not_found status
+}
+
 export async function createOrGetUser(userData: UserData): Promise<UserResponse> {
   const response = await fetch(`${API_BASE_URL}/users/create-or-get`, {
     method: 'POST',
@@ -94,6 +119,57 @@ export async function getProjectById(projectId: string): Promise<Project> {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || 'Failed to fetch project');
+  }
+
+  return response.json();
+}
+
+// NEW: CLI Authentication API functions
+export async function createCliAuthRequest(requestData: CliAuthRequestData): Promise<CliAuthStatus> {
+  const response = await fetch(`${API_BASE_URL}/cli-auth/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create CLI auth request');
+  }
+
+  return response.json();
+}
+
+export async function completeCliAuthRequest(completionData: CliAuthCompletionData): Promise<CliAuthStatus> {
+  const response = await fetch(`${API_BASE_URL}/cli-auth/complete`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(completionData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to complete CLI auth request');
+  }
+
+  return response.json();
+}
+
+export async function getCliAuthRequestStatus(cliAuthToken: string): Promise<CliAuthStatus> {
+  const response = await fetch(`${API_BASE_URL}/cli-auth/status?cliAuthToken=${cliAuthToken}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to get CLI auth request status');
   }
 
   return response.json();
