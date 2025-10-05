@@ -3,16 +3,15 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-// import Image from 'next/image'; // No longer needed for Empty state with icon
-// import { useTheme } from 'next-themes'; // No longer needed for Empty state with icon
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+// REMOVED: import { useQuery } from "convex/react";
+// REMOVED: import { api } from "@/convex/_generated/api";
+import { getProjectsByOwner, Project } from '@/lib/api'; // NEW: Import our API function and Project interface
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns'; // For date formatting
-import { IconFolderCode } from "@tabler/icons-react"; // For the Empty component icon
+import { formatDistanceToNow, format } from 'date-fns';
+import { IconFolderCode } from "@tabler/icons-react";
 import {
   Empty,
   EmptyContent,
@@ -20,7 +19,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty"; // For the Shadcn Empty state component
+} from "@/components/ui/empty";
 
 // Placeholder for a loading spinner or skeleton
 function LoadingProjectsSkeleton() {
@@ -44,19 +43,43 @@ function LoadingProjectsSkeleton() {
 
 // Main component to render the projects list or onboarding
 function ProjectsContent() {
-  const { isLoaded: isUserLoaded, isSignedIn } = useUser();
-  const projects = useQuery(api.projects.getProjects);
-  // const { resolvedTheme } = useTheme(); // No longer needed
-  const [mounted, setMounted] = useState(false); // State to handle hydration
+  const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
+  const [projects, setProjects] = useState<Project[] | null>(null); // State to store fetched projects
+  const [loadingProjects, setLoadingProjects] = useState(true); // Loading state for projects
+  const [error, setError] = useState<string | null>(null); // Error state
+  const [mounted, setMounted] = useState(false);
 
-  // Ensure component is mounted before using theme to avoid hydration mismatches
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Handle loading and unauthenticated states
-  if (!isUserLoaded || !isSignedIn || projects === undefined || !mounted) {
-    return <LoadingProjectsSkeleton />; // Show skeleton while loading user, projects, or mounting
+  useEffect(() => {
+    if (isUserLoaded && isSignedIn && user?.id) {
+      const fetchProjects = async () => {
+        setLoadingProjects(true);
+        setError(null);
+        try {
+          const fetchedProjects = await getProjectsByOwner(user.id);
+          setProjects(fetchedProjects);
+        } catch (err: unknown) {
+          console.error("Failed to fetch projects:", err);
+          setError(err instanceof Error ? err.message : "An unexpected error occurred while fetching projects.");
+          setProjects([]); // Set to empty array on error
+        } finally {
+          setLoadingProjects(false);
+        }
+      };
+
+      fetchProjects();
+    } else if (isUserLoaded && !isSignedIn) {
+      setLoadingProjects(false);
+      setProjects([]); // No projects if not signed in
+    }
+  }, [isUserLoaded, isSignedIn, user?.id]);
+
+  // Handle initial loading and unauthenticated states
+  if (!isUserLoaded || loadingProjects || !mounted) {
+    return <LoadingProjectsSkeleton />;
   }
 
   if (!isSignedIn) {
@@ -71,14 +94,24 @@ function ProjectsContent() {
     );
   }
 
+  // Handle error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-10rem)] text-center text-red-500">
+        <h1 className="text-3xl font-bold mb-4">Error Loading Projects</h1>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    );
+  }
+
   // --- Render based on whether projects exist ---
   if (!projects || projects.length === 0) {
-    // Removed illustrationSrc and related logic as we are using an icon
     return (
-      <Empty className="h-[calc(100vh-10rem)]"> {/* Added height to make it vertically centered */}
+      <Empty className="h-[calc(100vh-10rem)]">
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <IconFolderCode /> {/* Using the icon you suggested */}
+            <IconFolderCode />
           </EmptyMedia>
           <EmptyTitle>No stacks Yet</EmptyTitle>
           <EmptyDescription>
@@ -94,7 +127,6 @@ function ProjectsContent() {
             </Button>
           </Link>
         </EmptyContent>
-        {/* Removed "Learn More" link as it wasn't in original logic, but can be added back */}
       </Empty>
     );
   }
@@ -114,7 +146,7 @@ function ProjectsContent() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => (
-          <Link key={project._id} href={`/dashboard/projects/${project._id}/overview`} passHref>
+          <Link key={project.id} href={`/dashboard/projects/${project.id}/overview`} passHref>
             <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col justify-between">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold">{project.name}</CardTitle>
@@ -127,15 +159,16 @@ function ProjectsContent() {
                   Visibility: <span className="capitalize font-medium">{project.visibility}</span>
                 </p>
                 <p>
-                  Created: {format(project.createdAt, 'PP')}
+                  Created: {format(project.created_at, 'PP')}
                 </p>
                 <p>
-                  Last Updated: {formatDistanceToNow(project.updatedAt, { addSuffix: true })}
+                  Last Updated: {formatDistanceToNow(project.updated_at, { addSuffix: true })}
                 </p>
-                {project.stats && (
+                {/* Updated to use snake_case for stats fields from backend */}
+                {(project.stats_snapshots !== undefined || project.stats_deployments !== undefined) && (
                   <div className="pt-2 text-xs">
-                    <p>{project.stats.snapshots} snapshots</p>
-                    <p>{project.stats.deployments} deployments</p>
+                    {project.stats_snapshots !== undefined && <p>{project.stats_snapshots} snapshots</p>}
+                    {project.stats_deployments !== undefined && <p>{project.stats_deployments} deployments</p>}
                   </div>
                 )}
               </CardContent>
