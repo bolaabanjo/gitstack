@@ -9,16 +9,17 @@ import React, {
   ReactNode,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+// REMOVED: import { useQuery } from "convex/react";
+// REMOVED: import { api } from "@/convex/_generated/api";
+import { getProjectById, Project } from '@/lib/api'; // NEW: Import our API function and Project interface
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { Doc, Id } from "@/convex/_generated/dataModel";
+// REMOVED: import { Doc, Id } from "@/convex/_generated/dataModel";
 
 // --- Types ---
 interface ProjectContextType {
-  projectId: Id<"projects"> | null;
-  project: Doc<"projects"> | null;
+  projectId: string | null; // Changed from Id<"projects"> to string
+  project: Project | null; // Changed from Doc<"projects"> to Project
   isLoadingProject: boolean;
   error: string | null;
 }
@@ -37,44 +38,44 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
 
-  const projectId =
-    typeof params?.projectId === "string"
-      ? (params.projectId as Id<"projects">)
-      : null;
+  // projectId from params will be a string, which matches our backend UUIDs
+  const projectId = typeof params?.projectId === "string" ? params.projectId : null;
 
+  const [project, setProject] = useState<Project | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const project = useQuery(
-    api.projects.getProjectById,
-    projectId ? { projectId } : "skip"
-  );
-
-  // --- Handle query states ---
   useEffect(() => {
-    if (project === undefined) {
-      // Query still loading
+    const fetchProjectData = async () => {
+      if (!projectId) {
+        setError("No project ID provided.");
+        setIsLoadingProject(false);
+        router.replace("/dashboard/projects"); // Redirect if no ID
+        return;
+      }
+
       setIsLoadingProject(true);
       setError(null);
-    } else if (project === null && projectId) {
-      // Project not found or access denied
-      setIsLoadingProject(false);
-      const message = `Stack with ID "${projectId}" not found or access denied.`;
-      setError(message);
+      try {
+        const fetchedProject = await getProjectById(projectId); // UPDATED: Call our new API function
+        setProject(fetchedProject);
+      } catch (err: unknown) {
+        console.error("Failed to fetch stack by ID:", err);
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while loading stack details.";
+        setError(errorMessage);
+        toast.error("Error loading stack", {
+          description: errorMessage,
+          duration: 5000,
+        });
+        setProject(null);
+        router.replace("/dashboard/projects"); // Redirect on error
+      } finally {
+        setIsLoadingProject(false);
+      }
+    };
 
-      toast.error("Project access denied", {
-        description: message,
-        duration: 5000,
-      });
-
-      // Redirect back to project list
-      router.replace("/dashboard/projects");
-    } else {
-      // Successfully loaded project
-      setIsLoadingProject(false);
-      setError(null);
-    }
-  }, [project, projectId, router]);
+    fetchProjectData();
+  }, [projectId, router]); // Depend on projectId and router
 
   // --- Loading state ---
   if (isLoadingProject) {
@@ -86,8 +87,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // --- Error state ---
-  if (error) {
+  // --- Error state (only show if there's an error and not redirecting) ---
+  if (error && !isLoadingProject) { // Only show if loading is done but there's an error
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-red-500">
         <h1 className="text-xl font-bold mb-4">Error Loading Stack</h1>
@@ -97,10 +98,21 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // Ensure project is available before rendering children
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-red-500">
+        <h1 className="text-xl font-bold mb-4">Stack Not Found</h1>
+        <p className="text-lg">The requested stack could not be loaded.</p>
+        <p className="text-muted-foreground mt-4">Redirecting to stack list...</p>
+      </div>
+    );
+  }
+
   // --- Context value ---
   const contextValue: ProjectContextType = {
     projectId,
-    project: project ?? null, // ensures type safety
+    project,
     isLoadingProject,
     error,
   };
