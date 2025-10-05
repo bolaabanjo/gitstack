@@ -2,22 +2,23 @@
 import click
 import os
 from datetime import datetime, timezone
+import json # Import json for parsing backend responses
 
 # Import constants from config.py
-from .config import SNAPSHOT_SCHEMA # Ensure SNAPSHOT_SCHEMA is imported
+from .config import SNAPSHOT_SCHEMA
 
 # Import utility functions from utils.py
 from .utils import (
     get_authenticated_user_id,
     ensure_snapshot_dir,
     calculate_file_hash,
-    call_convex_function,
+    call_backend_api, # CORRECTED: Changed from call_convex_function
     respond
 )
 
 @click.command()
 def snap():
-    """Captures current code, dependencies, and environment and saves to Convex."""
+    """Captures current code, dependencies, and environment and saves."""
     ensure_snapshot_dir()
     user_id = get_authenticated_user_id()
     if not user_id:
@@ -26,9 +27,13 @@ def snap():
 
     files_to_snapshot = []
     for root, dirs, filenames in os.walk('.'):
+        # Exclude common directories like .git, .gitstack, __pycache__, venv, and node_modules
+        dirs[:] = [d for d in dirs if d not in ['.git', '.gitstack', '__pycache__', 'venv', 'node_modules']]
         for f in filenames:
-            if ".gitstack" not in root and ".git" not in root and "__pycache__" not in root and "venv" not in root:
-                files_to_snapshot.append(os.path.join(root, f))
+            filepath = os.path.join(root, f)
+            # Further filter out files within excluded directories if any slipped through
+            if not any(excluded_dir in filepath for excluded_dir in ['.git', '.gitstack', '__pycache__', 'venv', 'node_modules']):
+                files_to_snapshot.append(filepath)
     
     file_hashes = []
     for filepath in files_to_snapshot:
@@ -37,9 +42,9 @@ def snap():
             "hash": calculate_file_hash(filepath)
         })
 
-    timestamp = datetime.now(timezone.utc).timestamp() * 1000
+    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000) # Ensure integer timestamp
 
-    # Construct the snapshot data explicitly using SNAPSHOT_SCHEMA as a guide
+    # Construct the snapshot data
     snapshot_payload = {
         "userId": user_id,
         "timestamp": timestamp,
@@ -47,26 +52,18 @@ def snap():
         "fileHashes": file_hashes,
     }
 
-    # Optional: Basic validation against the schema (demonstrative)
-    # This is a basic type check; for full validation, a library like Pydantic or jsonschema would be used.
-    if not isinstance(snapshot_payload["userId"], SNAPSHOT_SCHEMA["userId"]):
-        respond(False, "Schema validation failed: userId is not a string.", {"field": "userId", "expected": str(SNAPSHOT_SCHEMA["userId"])})
-        return
-    if not isinstance(snapshot_payload["timestamp"], SNAPSHOT_SCHEMA["timestamp"]):
-        respond(False, "Schema validation failed: timestamp is not a float.", {"field": "timestamp", "expected": str(SNAPSHOT_SCHEMA["timestamp"])})
-        return
-    if not isinstance(snapshot_payload["files"], SNAPSHOT_SCHEMA["files"]):
-        respond(False, "Schema validation failed: files is not a list.", {"field": "files", "expected": str(SNAPSHOT_SCHEMA["files"])})
-        return
-    if not isinstance(snapshot_payload["fileHashes"], SNAPSHOT_SCHEMA["fileHashes"]):
-        respond(False, "Schema validation failed: fileHashes is not a list.", {"field": "fileHashes", "expected": str(SNAPSHOT_SCHEMA["fileHashes"])})
-        return
-    
-    result = call_convex_function("mutation", "snapshots:createSnapshot", snapshot_payload)
-    if result:
-        respond(True, "Snapshot taken and saved to Convex!", {"snapshot_id": result['value']})
-    else:
-        respond(False, "Failed to take snapshot.")
+    # IMPORTANT: Before uncommenting and using this, we need to implement
+    # the /api/snapshots/create endpoint in our backend (Task 8).
+    # For now, this will just print a message.
+    respond(True, "Snapshot functionality is pending backend implementation (Task 8).", {"snapshot_payload": snapshot_payload})
+
+    # Example of how it *would* call the new backend (uncomment when backend is ready)
+    # result = call_backend_api("POST", "/snapshots", data=snapshot_payload)
+    # if result:
+    #     respond(True, "Snapshot taken and saved!", {"snapshot_id": result.get("id")})
+    # else:
+    #     respond(False, "Failed to take snapshot.")
+
 
 @click.command()
 def list_snapshots():
@@ -76,23 +73,29 @@ def list_snapshots():
         respond(False, "You must be logged in to list snapshots.")
         return
 
-    snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data.get('value'):
-        respond(False, "No snapshots found.")
-        return
+    # IMPORTANT: Before uncommenting and using this, we need to implement
+    # the /api/snapshots?userId=... endpoint in our backend (Task 8).
+    # For now, this will just print a message.
+    respond(True, "List snapshots functionality is pending backend implementation (Task 8).")
 
-    formatted_snapshots = []
-    for i, snapshot in enumerate(snapshots_data['value']):
-        dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        formatted_snapshots.append({
-            "index": i + 1,
-            "id": snapshot['_id'],
-            "userId": snapshot['userId'], # Ensure userId is included in output
-            "timestamp": dt_object.isoformat(),
-            "files_count": len(snapshot.get('files', [])), # Add count of files
-            "file_hashes_count": len(snapshot.get('fileHashes', [])) # Add count of file hashes
-        })
-    respond(True, "Saved snapshots:", {"snapshots": formatted_snapshots})
+    # Example of how it *would* call the new backend (uncomment when backend is ready)
+    # snapshots_data = call_backend_api("GET", "/snapshots", params={"userId": user_id})
+    # if not snapshots_data:
+    #     respond(False, "No snapshots found or failed to fetch snapshots.")
+    #     return
+
+    # formatted_snapshots = []
+    # for i, snapshot in enumerate(snapshots_data): # Assuming backend returns a list of snapshots
+    #     dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
+    #     formatted_snapshots.append({
+    #         "index": i + 1,
+    #         "id": snapshot['id'], # Use 'id' from backend
+    #         "userId": snapshot['userId'],
+    #         "timestamp": dt_object.isoformat(),
+    #         "file_count": snapshot.get('file_count', 0), # Assuming backend provides file_count
+    #         "file_hashes_count": snapshot.get('file_hashes_count', 0) # Assuming backend provides hash count
+    #     })
+    # respond(True, "Saved snapshots:", {"snapshots": formatted_snapshots})
 
 @click.command()
 def restore():
@@ -102,44 +105,10 @@ def restore():
         respond(False, "You must be logged in to restore a snapshot.")
         return
     
-    snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data.get('value'):
-        respond(False, "No snapshots found to restore.")
-        return
-    
-    formatted_snapshots = []
-    for i, snapshot in enumerate(snapshots_data['value']):
-        dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        formatted_snapshots.append({
-            "index": i + 1,
-            "id": snapshot['_id'],
-            "userId": snapshot['userId'], # Ensure userId is included in output
-            "timestamp": dt_object.isoformat()
-        })
-    
-    respond(True, "Available snapshots:", {"snapshots": formatted_snapshots})
-    
-    try:
-        snapshot_num = click.prompt("Enter the number of the snapshot to restore", type=int)
-    except click.exceptions.Abort:
-        respond(False, "Restore cancelled by user.")
-        return
+    # IMPORTANT: Needs /api/snapshots?userId=... and /api/snapshots/:id endpoints
+    respond(True, "Restore functionality is pending backend implementation (Task 8).")
+    respond(True, "File restoration logic is a TODO for now.", {"files_to_restore_count": 0})
 
-    if 1 <= snapshot_num <= len(snapshots_data['value']):
-        snapshot_to_restore = snapshots_data['value'][snapshot_num - 1]
-        
-        respond(True, f"Restoring snapshot (ID: {snapshot_to_restore['_id']}) from: {datetime.fromtimestamp(snapshot_to_restore['timestamp'] / 1000, tz=timezone.utc).isoformat()}", {
-            "snapshot_id": snapshot_to_restore['_id'],
-            "userId": snapshot_to_restore['userId'], # Ensure userId is included
-            "timestamp": snapshot_to_restore['timestamp'],
-            "files_count": len(snapshot_to_restore.get("files", [])),
-            "file_hashes_count": len(snapshot_to_restore.get("fileHashes", []))
-        })
-        
-        # TODO: Implement actual file restoration (e.g., download files, overwrite local)
-        respond(True, "File restoration logic is a TODO for now.", {"files_to_restore_count": len(snapshot_to_restore.get("files", []))})
-    else:
-        respond(False, "Invalid snapshot number.")
 
 @click.command()
 def delete():
@@ -149,34 +118,5 @@ def delete():
         respond(False, "You must be logged in to delete a snapshot.")
         return
 
-    snapshots_data = call_convex_function("query", "snapshots:getSnapshots", {"userId": user_id})
-    if not snapshots_data or not snapshots_data.get('value'):
-        respond(False, "No snapshots found to delete.")
-        return
-    
-    formatted_snapshots = []
-    for i, snapshot in enumerate(snapshots_data['value']):
-        dt_object = datetime.fromtimestamp(snapshot['timestamp'] / 1000, tz=timezone.utc)
-        formatted_snapshots.append({
-            "index": i + 1,
-            "id": snapshot['_id'],
-            "userId": snapshot['userId'], # Ensure userId is included in output
-            "timestamp": dt_object.isoformat()
-        })
-    respond(True, "Available snapshots:", {"snapshots": formatted_snapshots})
-    
-    try:
-        snapshot_num = click.prompt("Enter the number of the snapshot to delete", type=int)
-    except click.exceptions.Abort:
-        respond(False, "Delete cancelled by user.")
-        return
-
-    if 1 <= snapshot_num <= len(snapshots_data['value']):
-        snapshot_to_delete = snapshots_data['value'][snapshot_num - 1]
-        result = call_convex_function("mutation", "snapshots:deleteSnapshot", {"snapshotId": snapshot_to_delete['_id'], "userId": user_id})
-        if result is not None:
-            respond(True, f"Snapshot {snapshot_to_delete['_id']} deleted successfully.", {"snapshot_id": snapshot_to_delete['_id'], "userId": snapshot_to_delete['userId']})
-        else:
-            respond(False, "Failed to delete snapshot.", {"snapshot_id": snapshot_to_delete['_id'], "userId": snapshot_to_delete['userId']})
-    else:
-        respond(False, "Invalid snapshot number.")
+    # IMPORTANT: Needs /api/snapshots?userId=... and /api/snapshots/:id (DELETE) endpoints
+    respond(True, "Delete snapshot functionality is pending backend implementation (Task 8).")

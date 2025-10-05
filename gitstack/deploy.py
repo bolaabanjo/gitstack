@@ -2,15 +2,16 @@
 import click
 import os
 from datetime import datetime, timezone
+import json # Import json for parsing backend responses
 
 # Import constants from config.py
-from .config import DEPLOYMENT_SCHEMA # Ensure DEPLOYMENT_SCHEMA is imported
+from .config import DEPLOYMENT_SCHEMA
 
 # Import utility functions from utils.py
 from .utils import (
     get_authenticated_user_id,
     calculate_file_hash,
-    call_convex_function,
+    call_backend_api, # CORRECTED: Changed from call_convex_function
     respond
 )
 
@@ -30,9 +31,9 @@ def deploy():
         respond(False, "Deployment cancelled by user.")
         return
 
-    timestamp = datetime.now(timezone.utc).timestamp() * 1000
+    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000) # Ensure integer timestamp
 
-    # Construct the deployment data explicitly using DEPLOYMENT_SCHEMA as a guide
+    # Construct the deployment data
     deployment_payload = {
         "userId": user_id,
         "branch": branch,
@@ -40,26 +41,15 @@ def deploy():
         "status": status,
     }
 
-    # Optional: Basic validation against the schema (demonstrative)
-    if not isinstance(deployment_payload["userId"], DEPLOYMENT_SCHEMA["userId"]):
-        respond(False, "Schema validation failed: userId is not a string.", {"field": "userId", "expected": str(DEPLOYMENT_SCHEMA["userId"])})
-        return
-    if not isinstance(deployment_payload["branch"], DEPLOYMENT_SCHEMA["branch"]):
-        respond(False, "Schema validation failed: branch is not a string.", {"field": "branch", "expected": str(DEPLOYMENT_SCHEMA["branch"])})
-        return
-    if not isinstance(deployment_payload["timestamp"], DEPLOYMENT_SCHEMA["timestamp"]):
-        respond(False, "Schema validation failed: timestamp is not a float.", {"field": "timestamp", "expected": str(DEPLOYMENT_SCHEMA["timestamp"])})
-        return
-    if not isinstance(deployment_payload["status"], DEPLOYMENT_SCHEMA["status"]):
-        respond(False, "Schema validation failed: status is not a string.", {"field": "status", "expected": str(DEPLOYMENT_SCHEMA["status"])})
-        return
-
-    respond(True, 'Deployment initiated (Convex integration needed)', {"deployment_payload": deployment_payload})
+    # IMPORTANT: Before uncommenting and using this, we need to implement
+    # the /api/deployments/create endpoint in our backend (Task 8).
+    # For now, this will just print a message.
+    respond(True, 'Deployment initiated (Backend integration needed - Task 8).', {"deployment_payload": deployment_payload})
     
-    # Example integration with Convex (uncomment and implement when ready)
-    # result = call_convex_function("mutation", "deployments:createDeployment", deployment_payload)
+    # Example integration with backend (uncomment and implement when ready)
+    # result = call_backend_api("POST", "/deployments", data=deployment_payload)
     # if result:
-    #     respond(True, "Deployment created!", {"deployment_id": result['value']})
+    #     respond(True, "Deployment created!", {"deployment_id": result.get("id")})
     # else:
     #     respond(False, "Failed to create deployment.")
 
@@ -86,20 +76,23 @@ def push():
                     "hash": calculate_file_hash(filepath)
                 })
     
-    timestamp = datetime.now(timezone.utc).timestamp() * 1000
+    timestamp = int(datetime.now(timezone.utc).timestamp() * 1000) # Ensure integer timestamp
     
-    respond(True, "Pushing current snapshot metadata and file hashes to Gitstack Web...")
-    result = call_convex_function("mutation", "snapshots:pushSnapshot", {
-        "userId": user_id,
-        "timestamp": timestamp,
-        "files": files_to_snapshot,
-        "fileHashes": file_hashes
-    })
+    respond(True, "Pushing current snapshot metadata and file hashes to Gitstack Web... (Backend integration needed - Task 8)")
+    # IMPORTANT: Before uncommenting and using this, we need to implement
+    # the /api/snapshots/push endpoint in our backend (Task 8).
+    # result = call_backend_api("POST", "/snapshots/push", data={
+    #     "userId": user_id,
+    #     "timestamp": timestamp,
+    #     "files": files_to_snapshot,
+    #     "fileHashes": file_hashes
+    # })
 
-    if result:
-        respond(True, "Snapshot pushed successfully!", {"snapshot_id": result['value'], "user_id": user_id, "timestamp": timestamp, "files_count": len(files_to_snapshot)})
-    else:
-        respond(False, "Failed to push snapshot.", {"user_id": user_id})
+    # if result:
+    #     respond(True, "Snapshot pushed successfully! (Task 8 pending)", {"snapshot_id": result.get("id"), "user_id": user_id, "timestamp": timestamp, "files_count": len(files_to_snapshot)})
+    # else:
+    #     respond(False, "Failed to push snapshot. (Task 8 pending)", {"user_id": user_id})
+
 
 @click.command()
 def pull():
@@ -108,9 +101,11 @@ def pull():
     if not user_id:
         respond(False, "You must be logged in to pull a snapshot.")
         return
-    respond(True, "Pulling current snapshot from the Gitstack Web... (Convex integration needed)", {"user_id": user_id})
-    # Placeholder for actual pull logic, e.g., fetching from Convex and restoring files
-    respond(True, "Snapshot pulled successfully.", {"user_id": user_id, "status": "completed"})
+    respond(True, "Pulling current snapshot from the Gitstack Web... (Backend integration needed - Task 8)", {"user_id": user_id})
+    # Placeholder for actual pull logic, e.g., fetching from backend and restoring files
+    # IMPORTANT: Needs /api/snapshots/pull endpoint in backend (Task 8)
+    respond(True, "Snapshot pulled successfully. (Task 8 pending)", {"user_id": user_id, "status": "completed"})
+
 
 @click.command()
 def join():
@@ -119,6 +114,7 @@ def join():
     if not user_id:
         respond(False, "You must be logged in to join a snapshot.")
         return
-    respond(True, "Joining current snapshot to the Gitstack Web... (Convex integration needed)", {"user_id": user_id})
+    respond(True, "Joining current snapshot to the Gitstack Web... (Backend integration needed - Task 8)", {"user_id": user_id})
     # Placeholder for actual join logic
-    respond(True, "Snapshot joined successfully.", {"user_id": user_id, "status": "completed"})
+    # IMPORTANT: Needs /api/snapshots/join endpoint in backend (Task 8)
+    respond(True, "Snapshot joined successfully. (Task 8 pending)", {"user_id": user_id, "status": "completed"})
