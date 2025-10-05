@@ -7,7 +7,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
-import ConvexClientProvider from '@/components/convex-client-provider' // Import the new provider
+// REMOVED: import ConvexClientProvider from '@/components/convex-client-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -41,7 +41,7 @@ export default function RootLayout({
     afterSignInUrl="/dashboard"
     afterSignUpUrl="/dashboard"
     >
-      <ConvexClientProvider> {/* Wrap children with ConvexClientProvider */}
+      {/* REMOVED: <ConvexClientProvider> */}
         <html lang="en" suppressHydrationWarning>
         <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}      >
             <ThemeProvider
@@ -55,7 +55,7 @@ export default function RootLayout({
             </ThemeProvider>
           </body>
         </html>
-      </ConvexClientProvider>
+      {/* REMOVED: </ConvexClientProvider> */}
     </ClerkProvider>
   )
 }
