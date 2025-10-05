@@ -3,9 +3,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-// REMOVED: import { useQuery } from "convex/react";
-// REMOVED: import { api } from "@/convex/_generated/api";
-import { getProjectsByOwner, Project } from '@/lib/api'; // NEW: Import our API function and Project interface
+import { getProjectsByOwner, Project, createOrGetUser } from '@/lib/api'; // NEW: Import createOrGetUser
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +18,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { toast } from 'sonner'; // NEW: Import toast for errors
 
 // Placeholder for a loading spinner or skeleton
 function LoadingProjectsSkeleton() {
@@ -44,9 +43,9 @@ function LoadingProjectsSkeleton() {
 // Main component to render the projects list or onboarding
 function ProjectsContent() {
   const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
-  const [projects, setProjects] = useState<Project[] | null>(null); // State to store fetched projects
-  const [loadingProjects, setLoadingProjects] = useState(true); // Loading state for projects
-  const [error, setError] = useState<string | null>(null); // Error state
+  const [projects, setProjects] = useState<Project[] | null>(null);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -54,28 +53,43 @@ function ProjectsContent() {
   }, []);
 
   useEffect(() => {
-    if (isUserLoaded && isSignedIn && user?.id) {
-      const fetchProjects = async () => {
-        setLoadingProjects(true);
-        setError(null);
-        try {
-          const fetchedProjects = await getProjectsByOwner(user.id);
-          setProjects(fetchedProjects);
-        } catch (err: unknown) {
-          console.error("Failed to fetch stacks:", err);
-          setError(err instanceof Error ? err.message : "An unexpected error occurred while fetching stacks.");
-          setProjects([]); // Set to empty array on error
-        } finally {
-          setLoadingProjects(false);
-        }
-      };
+    const loadProjects = async () => {
+      if (!isUserLoaded || !mounted) {
+        return; // Wait for user data to load and component to mount
+      }
 
-      fetchProjects();
-    } else if (isUserLoaded && !isSignedIn) {
-      setLoadingProjects(false);
-      setProjects([]); // No projects if not signed in
-    }
-  }, [isUserLoaded, isSignedIn, user?.id]);
+      if (!isSignedIn || !user?.id || !user.primaryEmailAddress?.emailAddress) {
+        setLoadingProjects(false);
+        setProjects([]); // No projects if not signed in or user data incomplete
+        return;
+      }
+
+      setLoadingProjects(true);
+      setError(null);
+      try {
+        // Step 1: Ensure user exists in our PostgreSQL DB and get their internal UUID
+        const { userId: pgUserId } = await createOrGetUser({
+          clerkUserId: user.id,
+          email: user.primaryEmailAddress.emailAddress,
+          name: user.fullName || user.username || undefined,
+        });
+
+        // Step 2: Fetch projects using the PostgreSQL user's UUID
+        const fetchedProjects = await getProjectsByOwner(pgUserId); // UPDATED: Use pgUserId
+        setProjects(fetchedProjects);
+      } catch (err: unknown) {
+        console.error("Failed to fetch stacks:", err);
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while fetching stacks.";
+        setError(errorMessage);
+        toast.error("Error loading stacks", { description: errorMessage }); // Show toast
+        setProjects([]);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    loadProjects();
+  }, [isUserLoaded, isSignedIn, user?.id, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.username, mounted]); // Added new dependencies
 
   // Handle initial loading and unauthenticated states
   if (!isUserLoaded || loadingProjects || !mounted) {
@@ -113,7 +127,7 @@ function ProjectsContent() {
           <EmptyMedia variant="icon">
             <IconFolderCode />
           </EmptyMedia>
-          <EmptyTitle>No stacks Yet</EmptyTitle> {/* Changed from No projects Yet to No stacks Yet */}
+          <EmptyTitle>No stacks Yet</EmptyTitle>
           <EmptyDescription>
             You haven&apos;t created any stacks yet. Get started by creating
             your first stack.
@@ -123,7 +137,7 @@ function ProjectsContent() {
           <Link href="/dashboard/projects/new" passHref>
             <Button size="lg" className="flex items-center cursor-pointer space-x-2 rounded-full">
               <PlusCircle className="h-5 w-5" />
-              <span>Create New Stack</span> {/* Changed from Create New Project to Create New Stack */}
+              <span>Create New Stack</span>
             </Button>
           </Link>
         </EmptyContent>
@@ -135,11 +149,11 @@ function ProjectsContent() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-extrabold tracking-tight">Your Stacks</h1> {/* Changed from Projects to Stacks */}
+        <h1 className="text-4xl font-extrabold tracking-tight">Your Stacks</h1>
         <Link href="/dashboard/projects/new" passHref>
           <Button size="sm" className="flex items-center space-x-2">
             <PlusCircle className="h-4 w-4" />
-            <span>New Stack</span> {/* Changed from New Project to New Stack */}
+            <span>New Stack</span>
           </Button>
         </Link>
       </div>
