@@ -59,7 +59,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     } else if (project === null && projectId) {
       // Project not found or access denied
       setIsLoadingProject(false);
-      const message = `Project with ID "${projectId}" not found or access denied.`;
+      const message = `Stack with ID "${projectId}" not found or access denied.`;
       setError(message);
 
       toast.error("Project access denied", {
@@ -81,7 +81,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p>Loading project details...</p>
+        <p>Loading stack details...</p>
       </div>
     );
   }
@@ -90,9 +90,9 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-red-500">
-        <h1 className="text-3xl font-bold mb-4">Error Loading Project</h1>
+        <h1 className="text-xl font-bold mb-4">Error Loading Stack</h1>
         <p className="text-lg">{error}</p>
-        <p className="text-muted-foreground mt-4">Redirecting to project list...</p>
+        <p className="text-muted-foreground mt-4">Redirecting to stack list...</p>
       </div>
     );
   }

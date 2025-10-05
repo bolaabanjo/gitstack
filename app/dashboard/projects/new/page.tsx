@@ -29,11 +29,11 @@ import { useUser } from '@clerk/nextjs';
 
 // --- Form Schema Definition with Zod ---
 const projectFormSchema = z.object({
-  name: z.string().min(3, { message: "Project name must be at least 3 characters." }).max(50, { message: "Project name cannot exceed 50 characters." }),
+  name: z.string().min(3, { message: "Stack name must be at least 3 characters." }).max(50, { message: "Project name cannot exceed 50 characters." }),
   description: z.string().max(200, { message: "Description cannot exceed 200 characters." }).optional(),
   visibility: z
   .enum(["public", "private"])
-  .refine((val) => val, { message: "Project visibility is required." }),
+  .refine((val) => val, { message: "Stack visibility is required." }),
 
 });
 

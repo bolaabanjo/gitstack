@@ -20,7 +20,7 @@ export default function DashboardRedirectPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
       <Loader2 className="h-8 w-8 animate-spin mb-4" />
-      <p>Redirecting to your projects...</p>
+      <p>Redirecting to your stacks...</p>
     </div>
   );
 }
