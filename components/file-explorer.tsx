@@ -229,10 +229,10 @@ import { cn } from "@/lib/utils";
     }
 
     // Main File Explorer Component
-    export function FileExplorer({ }: { }) { // Renamed to _projectId
-      const [searchQuery, setSearchQuery] = useState("");
-      const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
-    
+    export function FileExplorer({ _projectId }: { _projectId?: string }) { // Renamed to _projectId
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
+
       // Mock data - replace with real API call
       const mockFiles: FileNode[] = [
         {
