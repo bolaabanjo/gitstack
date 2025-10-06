@@ -112,7 +112,7 @@ export default function CreateNewProjectPage() {
       });
 
       localStorage.removeItem(AUTOSAVE_KEY);
-      router.push(`/dashboard/projects/${newProject.id}/overview`);
+      router.push(`/dashboard/projects/${newProject.id}/code`);
     } catch (error: unknown) {
       console.error("Failed to create project:", error);
       toast.error("Failed to create project", {

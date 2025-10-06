@@ -25,7 +25,7 @@
 
     const breadcrumbItems = [
       { label: "Project", href: "/dashboard" },
-      { label: "Overview", href: "/dashboard" },
+      { label: "Code", href: "/dashboard" },
     ];
 
     function AccountMenu() {

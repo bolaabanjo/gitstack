@@ -62,7 +62,7 @@ function ProjectCard({ project, index }: { project: Project; index: number }) {
       whileHover={{ y: -4 }}
       className="group relative"
     >
-      <Link href={`/dashboard/projects/${project.id}/overview`}>
+      <Link href={`/dashboard/projects/${project.id}/code`}>
         <div className="relative overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
           {/* Gradient overlay on hover */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
