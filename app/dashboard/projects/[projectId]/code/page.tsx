@@ -1,20 +1,20 @@
 // app/dashboard/projects/[projectId]/code/page.tsx
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getBranches,
   getTags,
   getTree,
   getReadmeApi,
   getProjectById,
-  deleteProject, // Import deleteProject
+  deleteProject,
   type Branch,
   type Tag,
   type TreeEntry,
   type Project,
 } from "@/lib/api";
-import { useState, useMemo, useEffect } from "react"; // Import useEffect
+import { useState, useEffect } from "react"; // Removed useMemo as it was unused
 import { RepoHeader } from "@/components/code/repo-header";
 import { BranchPicker } from "@/components/code/branch-picker";
 import { TagList } from "@/components/code/tag-list";
@@ -32,56 +32,74 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Import Alert Dialog components
-import { toast } from "sonner"; // Import toast for notifications
-import { useRouter } from "next/navigation"; // Import useRouter
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
   const [branch, setBranch] = useState<string>("main");
   const [path, setPath] = useState<string>("");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // State for delete dialog
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const queryClient = useQueryClient(); // Initialize query client
+  const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { data: project, isLoading: isLoadingProject } = useQuery<Project, Error>({ queryKey: ["project", projectId], queryFn: () => getProjectById(projectId) });
-  const { data: branches } = useQuery<Branch[], Error>({ queryKey: ["branches", projectId], queryFn: () => getBranches(projectId) });
-  const { data: tags } = useQuery<Tag[], Error>({ queryKey: ["tags", projectId], queryFn: () => getTags(projectId) });
+  // All hooks must be called unconditionally at the top level
+  const { data: project, isLoading: isLoadingProject } = useQuery<Project, Error>({
+    queryKey: ["project", projectId],
+    queryFn: () => getProjectById(projectId),
+  });
+  const { data: branches } = useQuery<Branch[], Error>({
+    queryKey: ["branches", projectId],
+    queryFn: () => getBranches(projectId),
+  });
+  const { data: tags } = useQuery<Tag[], Error>({
+    queryKey: ["tags", projectId],
+    queryFn: () => getTags(projectId),
+  });
   const { data: tree, isLoading: treeLoading } = useQuery<TreeEntry[], Error>({
     queryKey: ["tree", projectId, branch, path],
     queryFn: () => getTree(projectId, { branch, path }),
   });
-  const { data: readme } = useQuery({ queryKey: ["readme", projectId, branch], queryFn: () => getReadmeApi(projectId, branch) });
+  const { data: readme } = useQuery({
+    queryKey: ["readme", projectId, branch],
+    queryFn: () => getReadmeApi(projectId, branch),
+  });
 
-  const contributorsQuery = undefined; // optional later
+  // Removed unused contributorsQuery
 
-  // Mutation for deleting a project
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] }); // Invalidate project list cache
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Project deleted", { description: "The project has been successfully removed." });
-      router.push("/dashboard/projects"); // Redirect to projects list
+      router.push("/dashboard/projects");
     },
     onError: (error: Error) => {
       toast.error("Failed to delete project", { description: error.message });
     },
     onSettled: () => {
-      setShowDeleteDialog(false); // Close dialog regardless of outcome
+      setShowDeleteDialog(false);
     },
   });
 
-  const handleDeleteProject = (id: string) => {
+  const handleDeleteProject = () => { // Removed 'id' parameter as projectId is already in scope
     setShowDeleteDialog(true);
-    // The actual deletion will happen when confirming the dialog
   };
 
   const confirmDeleteProject = () => {
     deleteProjectMutation.mutate(projectId);
   };
 
-  // If project data is loading, show skeleton.
+  // This useEffect now runs unconditionally to handle redirection logic
+  useEffect(() => {
+    if (!isLoadingProject && !project) {
+      router.replace("/dashboard/projects");
+      toast.error("Project not found", { description: "The project you tried to access does not exist or has been deleted." });
+    }
+  }, [isLoadingProject, project, router]);
+
   if (isLoadingProject) {
     return (
       <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
@@ -95,17 +113,8 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     );
   }
 
-  // If project is not found after loading, redirect.
-  // This handles cases where the project was deleted or doesn't exist.
-  useEffect(() => {
-    if (!isLoadingProject && !project) {
-      router.replace("/dashboard/projects");
-      toast.error("Project not found", { description: "The project you tried to access does not exist or has been deleted." });
-    }
-  }, [isLoadingProject, project, router]);
-
   if (!project) {
-    return null; // Don't render until project is loaded or redirected
+    return null; // Will be handled by the useEffect redirect
   }
 
   return (
