@@ -83,21 +83,6 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
 
       {/* Right Section: Action Buttons and Account Menu */}
       <div className="flex items-center space-x-4">
-        {/* Action Buttons */}
-        <div className="flex items-center space-x-2">
-          <Button variant="ghost" size="sm" title="Push local snapshot">
-            <Upload className="h-4 w-4 mr-2" />
-            Push
-          </Button>
-          <Button variant="ghost" size="sm" title="Pull remote snapshot">
-            <Download className="h-4 w-4 mr-2" />
-            Pull
-          </Button>
-          <Button variant="default" size="sm">
-            <Rocket className="h-4 w-4 mr-2" />
-            Deploy
-          </Button>
-        </div>
 
         {/* Account Menu */}
         <AccountMenu />
