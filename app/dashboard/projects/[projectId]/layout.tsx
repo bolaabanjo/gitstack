@@ -18,6 +18,7 @@ import {
   Sidebar as UISidebar,
   SidebarProvider,
   SidebarInset,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -139,15 +140,14 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
 }
 
 // --- SidebarContent component ---
-// We split this out so that useSidebar() is always called under SidebarProvider.
 function SidebarContent({ children }: { children: ReactNode }) {
   const sidebar = useSidebar();
 
   return (
-    <div className="flex min-h-screen w-full">
-      {/* Sidebar - KEY CHANGE: Added collapsible="icon" */}
-      <UISidebar collapsible="icon">
-        <SidebarComponent isCollapsed={sidebar.state === "collapsed"} />
+    <>
+      {/* Sidebar */}
+      <UISidebar collapsible="icon" variant="sidebar">
+        <SidebarComponent />
       </UISidebar>
 
       {/* Main content */}
@@ -160,6 +160,6 @@ function SidebarContent({ children }: { children: ReactNode }) {
           {children}
         </main>
       </SidebarInset>
-    </div>
+    </>
   );
 }

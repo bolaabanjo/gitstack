@@ -160,21 +160,21 @@ function FileRow({ file }: { file: FileNode }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="group grid grid-cols-[1fr_100px_120px_50px] items-center gap-4 rounded-md border border-transparent px-4 py-2.5 transition-all hover:border-border/50 hover:bg-accent/30 cursor-pointer"
+      className="group grid grid-cols-[1fr_120px_120px_60px] items-center gap-4 rounded-lg border px-4 py-3 transition-all hover:bg-accent/50 hover:shadow-sm"
     >
       <div className="flex items-center gap-3 min-w-0">
         <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-        <span className="truncate text-sm font-medium">{file.name}</span>
+        <span className="truncate font-medium">{file.name}</span>
         {file.extension && (
-          <Badge variant="outline" className="text-[10px] h-4 px-1">
+          <Badge variant="outline" className="text-xs">
             {file.extension}
           </Badge>
         )}
       </div>
-      <div className="text-xs text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         {formatFileSize(file.size)}
       </div>
-      <div className="text-xs text-muted-foreground">
+      <div className="text-sm text-muted-foreground">
         {file.modified ? formatDistanceToNow(file.modified, { addSuffix: true }) : "-"}
       </div>
       <DropdownMenu>
@@ -182,9 +182,9 @@ function FileRow({ file }: { file: FileNode }) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-8 w-8 opacity-0 group-hover:opacity-100"
           >
-            <MoreHorizontal className="h-3.5 w-3.5" />
+            <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -313,25 +313,23 @@ export function FileExplorer({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Card className="border-border/50 bg-card/50 backdrop-blur">
-      <CardHeader className="border-b border-border/50">
+    <Card className="h-full">
+      <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">Files</CardTitle>
-            <CardDescription className="text-xs">
-              Browse and manage your project files
-            </CardDescription>
+            <CardTitle>Files</CardTitle>
+            <CardDescription>Browse and manage your project files</CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Upload className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Upload</span>
+            <Button variant="outline" size="sm">
+              <Upload className="h-4 w-4 mr-2" />
+              Upload
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">New</span>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  New
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -354,17 +352,17 @@ export function FileExplorer({ projectId }: { projectId: string }) {
             placeholder="Search files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-muted/30 border-border/50"
+            className="pl-9"
           />
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        <div className="grid lg:grid-cols-[220px_1fr] min-h-[500px]">
+      <CardContent>
+        <div className="grid grid-cols-[250px_1fr] gap-6">
           {/* Left: Tree View */}
-          <div className="space-y-1 border-r border-border/50 p-3 bg-muted/20">
-            <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+          <div className="space-y-1 border-r pr-4">
+            <div className="flex items-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               <Folder className="h-3.5 w-3.5" />
-              Tree
+              File Tree
             </div>
             {mockFiles.map((node) => (
               <TreeNode
@@ -377,16 +375,16 @@ export function FileExplorer({ projectId }: { projectId: string }) {
           </div>
 
           {/* Right: File Table */}
-          <div className="space-y-3 p-4">
+          <div className="space-y-3">
             {/* Table Header */}
-            <div className="grid grid-cols-[1fr_100px_120px_50px] gap-4 px-4 text-xs font-medium text-muted-foreground/80 uppercase tracking-wider">
+            <div className="grid grid-cols-[1fr_120px_120px_60px] gap-4 px-4 text-xs font-medium text-muted-foreground">
               <div>Name</div>
               <div>Size</div>
               <div>Modified</div>
               <div></div>
             </div>
             {/* File Rows */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {filteredFiles.map((file) => (
                 <FileRow key={file.id} file={file} />
               ))}

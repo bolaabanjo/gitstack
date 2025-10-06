@@ -16,11 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FileExplorer } from "@/components/file-explorer";
-import { CLIWidget } from "@/components/cli-widget";
-import { DeploymentStatus } from "@/components/deployment-status";
-import { ObservabilitySection } from "@/components/analytics-card";
-import { FirewallWidget } from "@/components/firewall-widget";
 
 // Enhanced metrics card component
 function MetricCard({ 
@@ -178,7 +173,7 @@ function SnapshotTimelineComponent({ projectId }: { projectId: string }) {
                         {formatDistanceToNowStrict(new Date(snapshot.timestamp), { addSuffix: true })}
                       </span>
                     </div>
-                  </div>
+        </div>
                   {snapshot.external_id && (
                     <Badge variant="secondary" className="text-xs">
                       {snapshot.external_id.substring(0, 6)}
@@ -230,6 +225,27 @@ function ActivityFeedComponent() {
               </div>
             </motion.div>
           ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// File explorer placeholder
+function FileExplorerPlaceholder() {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>File Explorer</CardTitle>
+        <CardDescription>Browse your project files and folders</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+          <h3 className="font-medium mb-2">File explorer coming soon</h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Browse and manage your project&apos;s file structure directly from the dashboard.
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -320,63 +336,78 @@ export default function ProjectOverviewPage({
   }
 
   if (!project) {
-    return (
+  return (
       <div className="flex h-full items-center justify-center p-8">
         <p className="text-muted-foreground">Project not found.</p>
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
-    <div className="flex-1 space-y-8 p-4 md:p-6 lg:p-8 animate-in fade-in duration-500">
-      {/* Project Header - Vercel Style */}
-      <ProjectHeader project={project} />
-
-      {/* Deployment Status - Like Vercel's Production Deployment Card */}
+    <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
+      {/* Project Header */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
+        transition={{ duration: 0.4 }}
       >
-        <DeploymentStatus />
+        <ProjectHeader project={project} />
       </motion.div>
 
-      {/* Observability Section with Analytics */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-      >
-        <ObservabilitySection />
-      </motion.div>
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Snapshots"
+          value={project.stats_snapshots || 0}
+          icon={Camera}
+          description="All time"
+          index={0}
+        />
+        <MetricCard
+          title="Deployments"
+          value={project.stats_deployments || 0}
+          icon={Rocket}
+          description="Total deploys"
+          index={1}
+        />
+        <MetricCard
+          title="Last Deployed"
+          value={project.stats_last_deployed ? formatDistanceToNowStrict(new Date(project.stats_last_deployed)) : 'Never'}
+          icon={Clock}
+          description={project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPp') : undefined}
+          index={2}
+        />
+        <MetricCard
+          title="Status"
+          value="Active"
+          icon={TrendingUp}
+          description="All systems operational"
+          index={3}
+        />
+      </div>
 
-      {/* Firewall & Security */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-        className="grid gap-6 lg:grid-cols-2"
-      >
-        <FirewallWidget />
-        <ActivityFeedComponent />
-      </motion.div>
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        {/* Left Column - File Explorer */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <FileExplorerPlaceholder />
+        </motion.div>
 
-      {/* File Explorer & CLI - Main Content */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-        className="grid gap-6 xl:grid-cols-[1fr_380px]"
-      >
-        {/* File Explorer - Main */}
-        <FileExplorer projectId={projectId} />
-
-        {/* Right Sidebar - CLI & Snapshots */}
-        <div className="space-y-6">
-          <CLIWidget projectId={projectId} />
+        {/* Right Column - Snapshots & Activity */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="space-y-6"
+        >
           <SnapshotTimelineComponent projectId={projectId} />
+          <ActivityFeedComponent />
+        </motion.div>
+      </div>
         </div>
-      </motion.div>
-    </div>
   );
 }
