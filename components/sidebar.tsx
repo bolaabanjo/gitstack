@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup, 
+  SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
@@ -20,7 +20,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Import Lucide icons
 import {
   Code,
   Camera,
@@ -28,14 +27,14 @@ import {
   GitCompare,
   Drone,
   Cog,
-  Boxes,  
+  Boxes,
   PlusCircle,
   Settings,
   GalleryVerticalEnd,
   Wrench,
 } from 'lucide-react';
 
-// Map icon names to Lucide components
+// Icon map
 const IconMap: { [key: string]: React.ElementType } = {
   code: Code,
   camera: Camera,
@@ -69,13 +68,12 @@ const accountNavItems = [
   { id: "team-management", label: "Team", icon: "boxes", route: "/dashboard/team" },
 ];
 
-// Sidebar Component - Uses shadcn/ui sidebar hooks properly
 export default function Sidebar() {
   const pathname = usePathname();
   const params = useParams();
   const projectId = typeof params.projectId === 'string' ? params.projectId : null;
   const { user, isSignedIn } = useUser();
-  useSidebar(); // Get current sidebar state
+  useSidebar();
 
   const userDisplayName = user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
   const userEmail = user?.emailAddresses[0]?.emailAddress;
@@ -86,13 +84,14 @@ export default function Sidebar() {
   };
 
   return (
-    <>
-      {/* Header with Logo */}
+    <div className="h-full overflow-x-hidden"> {/* prevents horizontal scrollbar */}
+
+      {/* Header */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard" className="flex items-center gap-3">
+              <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Image
                     src="/sdark.png"
@@ -102,7 +101,7 @@ export default function Sidebar() {
                     className="size-5"
                   />
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight min-w-0">
                   <span className="truncate font-semibold">Gitstack</span>
                   <span className="truncate text-xs text-muted-foreground">Version Control</span>
                 </div>
@@ -190,14 +189,17 @@ export default function Sidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with CTA and User Profile */}
+      {/* Footer */}
       <SidebarFooter>
         {/* New Snapshot Button */}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleNewSnapshot} className="w-full">
+            <SidebarMenuButton 
+              onClick={handleNewSnapshot} 
+              className="w-full overflow-hidden"
+            >
               <PlusCircle />
-              <span>New Snapshot</span>
+              <span className="truncate">New Snapshot</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -206,9 +208,9 @@ export default function Sidebar() {
         {isSignedIn && (
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="flex items-center gap-2 px-2 py-1.5">
+              <div className="flex items-center gap-2 px-2 py-1.5 overflow-hidden">
                 <UserButton afterSignOutUrl="/" />
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <div className="grid flex-1 text-left text-sm leading-tight min-w-0 overflow-hidden">
                   <span className="truncate font-semibold">{userDisplayName}</span>
                   {userEmail && (
                     <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
@@ -219,6 +221,6 @@ export default function Sidebar() {
           </SidebarMenu>
         )}
       </SidebarFooter>
-    </>
+    </div>
   );
 }
