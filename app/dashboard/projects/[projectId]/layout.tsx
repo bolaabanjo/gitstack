@@ -129,37 +129,28 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     error: null,
   };
 
-  // --- Final Layout ---
+  // --- Final Layout - Proper Sidebar Integration ---
   return (
     <ProjectContext.Provider value={contextValue}>
       <SidebarProvider defaultOpen={true}>
-        <SidebarContent>{children}</SidebarContent>
+        <div className="flex min-h-screen w-full">
+          {/* Sidebar - Uses shadcn/ui Sidebar component */}
+          <UISidebar collapsible="icon" variant="sidebar">
+            <SidebarComponent />
+          </UISidebar>
+
+          {/* Main content area */}
+          <SidebarInset>
+            <TopbarComponent
+              toggleSidebar={useSidebar().toggleSidebar}
+              isSidebarCollapsed={useSidebar().state === "collapsed"}
+            />
+            <main className="flex-1 overflow-auto bg-background text-foreground">
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
       </SidebarProvider>
     </ProjectContext.Provider>
-  );
-}
-
-// --- SidebarContent component ---
-function SidebarContent({ children }: { children: ReactNode }) {
-  const sidebar = useSidebar();
-
-  return (
-    <>
-      {/* Sidebar */}
-      <UISidebar collapsible="icon" variant="sidebar">
-        <SidebarComponent />
-      </UISidebar>
-
-      {/* Main content */}
-      <SidebarInset>
-        <TopbarComponent
-          toggleSidebar={sidebar.toggleSidebar}
-          isSidebarCollapsed={sidebar.state === "collapsed"}
-        />
-        <main className="flex-1 overflow-auto bg-background text-foreground">
-          {children}
-        </main>
-      </SidebarInset>
-    </>
   );
 }

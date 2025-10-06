@@ -5,15 +5,14 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import { useUser, UserButton } from '@clerk/nextjs';
 import {
+  SidebarHeader,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -47,12 +46,11 @@ const IconMap: { [key: string]: React.ElementType } = {
   plus: PlusCircle,
 };
 
-// Global navigation items
+// Navigation data
 const globalNavItems = [
   { id: "projects", label: "Projects", icon: "home", route: "/dashboard/projects" },
 ];
 
-// Project-specific navigation items
 const getProjectNavItems = (projectId: string) => [
   { id: "overview", label: "Overview", icon: "home", route: `/dashboard/projects/${projectId}/overview` },
   { id: "snapshots", label: "Snapshots", icon: "camera", route: `/dashboard/projects/${projectId}/snapshots` },
@@ -62,19 +60,18 @@ const getProjectNavItems = (projectId: string) => [
   { id: "project-settings", label: "Settings", icon: "cog", route: `/dashboard/projects/${projectId}/settings` },
 ];
 
-// Account navigation items
 const accountNavItems = [
   { id: "account-settings", label: "Settings", icon: "settings", route: "/dashboard/settings" },
   { id: "team-management", label: "Team", icon: "users", route: "/dashboard/team" },
 ];
 
-// Sidebar Component - No longer needs isCollapsed prop, uses useSidebar() instead
+// Sidebar Component - Uses shadcn/ui sidebar hooks properly
 export default function Sidebar() {
   const pathname = usePathname();
   const params = useParams();
   const projectId = typeof params.projectId === 'string' ? params.projectId : null;
   const { user, isSignedIn } = useUser();
-  const { state } = useSidebar();
+  const { state } = useSidebar(); // Get current sidebar state
 
   const userDisplayName = user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
   const userEmail = user?.emailAddresses[0]?.emailAddress;
@@ -91,7 +88,7 @@ export default function Sidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/dashboard" className="flex items-center gap-2">
+              <Link href="/dashboard" className="flex items-center gap-3">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <Image
                     src="/sdark.png"
@@ -123,7 +120,7 @@ export default function Sidebar() {
                 const isActive = pathname === item.route;
                 return (
                   <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton asChild isActive={isActive}>
                       <Link href={item.route}>
                         {IconComponent && <IconComponent />}
                         <span>{item.label}</span>
@@ -149,7 +146,7 @@ export default function Sidebar() {
                     const isActive = pathname.startsWith(item.route);
                     return (
                       <SidebarMenuItem key={item.id}>
-                        <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                        <SidebarMenuButton asChild isActive={isActive}>
                           <Link href={item.route}>
                             {IconComponent && <IconComponent />}
                             <span>{item.label}</span>
@@ -175,7 +172,7 @@ export default function Sidebar() {
                 const isActive = pathname === item.route;
                 return (
                   <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton asChild isActive={isActive}>
                       <Link href={item.route}>
                         {IconComponent && <IconComponent />}
                         <span>{item.label}</span>
@@ -194,7 +191,7 @@ export default function Sidebar() {
         {/* New Snapshot Button */}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleNewSnapshot} tooltip="New Snapshot" className="w-full">
+            <SidebarMenuButton onClick={handleNewSnapshot} className="w-full">
               <PlusCircle />
               <span>New Snapshot</span>
             </SidebarMenuButton>
