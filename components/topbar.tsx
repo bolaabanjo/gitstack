@@ -15,7 +15,7 @@
       // Removed: Download,
       // Removed: Rocket,
       Search,
-      Menu,
+      PanelsTopLeft,
     } from 'lucide-react';
 
     interface TopbarProps {
@@ -49,7 +49,7 @@
               className="hidden md:flex"
               aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
-              <Menu className="h-5 w-5" />
+              <PanelsTopLeft className="h-5 w-5" />
             </Button>
 
             <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
