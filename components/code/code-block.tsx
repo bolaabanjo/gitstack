@@ -1,26 +1,23 @@
 "use client";
 
 import React, { useMemo } from "react";
-import * as PrismRenderer from "prism-react-renderer";
+import { Highlight, PrismTheme, Language } from "prism-react-renderer";
 import { codeTheme, codeSurface, codeSurfaceSoft, codeBorder } from "@/components/code/code-theme";
 import { CopyButton } from "@/components/code/copy-button";
 import { cn } from "@/lib/utils";
 
-
+type Token = { types: string[]; content: string };
 type HighlightChildArgs = {
   className: string;
   style: React.CSSProperties;
-  tokens: Array<Array<{ types: string[]; content: string }>>;
-  getLineProps: (opts: { line: any; key?: React.Key }) => any;
-  getTokenProps: (opts: { token: any; key?: React.Key }) => any;
+  tokens: Token[][];
+  getLineProps: (opts: { line: Token[]; key?: React.Key }) => React.HTMLAttributes<HTMLElement>;
+  getTokenProps: (opts: { token: Token; key?: React.Key }) => React.HTMLAttributes<HTMLElement>;
 };
 
-const Highlight: React.ComponentType<any> =
-  ((PrismRenderer as any).default ?? PrismRenderer) as any;
-
-function clampLanguage(lang?: string) {
-  if (!lang) return "text";
-  const m: Record<string, string> = {
+function clampLanguage(lang?: string): Language {
+  if (!lang) return "text" as Language;
+  const aliases: Record<string, Language> = {
     yml: "yaml",
     sh: "bash",
     shell: "bash",
@@ -30,8 +27,11 @@ function clampLanguage(lang?: string) {
     jsx: "jsx",
     md: "markdown",
     mdx: "markdown",
+    py: "python",
+    go: "go",
+    rs: "rust",
   };
-  return m[lang] ?? lang;
+  return aliases[lang] ?? (lang as Language);
 }
 
 export function CodeBlock({
@@ -53,11 +53,7 @@ export function CodeBlock({
 
   return (
     <div
-      className={cn(
-        "rounded-md border overflow-hidden shadow-sm",
-        "relative",
-        className
-      )}
+      className={cn("rounded-md border overflow-hidden shadow-sm relative", className)}
       style={{ backgroundColor: codeSurface, borderColor: codeBorder }}
     >
       <div
@@ -73,7 +69,7 @@ export function CodeBlock({
       </div>
 
       <div className={cn("overflow-auto", wrap ? "whitespace-pre-wrap" : "whitespace-pre")}>
-        <Highlight code={code} language={lang} theme={codeTheme}>
+        <Highlight code={code} language={lang} theme={codeTheme as PrismTheme}>
           {({ className: cls, style, tokens, getLineProps, getTokenProps }: HighlightChildArgs) => (
             <pre
               className={cn(cls, "m-0 p-0")}
@@ -90,14 +86,14 @@ export function CodeBlock({
                   const lineNumber = i + 1;
                   return (
                     <div key={i} className="contents">
-                      {showLineNumbers ? (
+                      {showLineNumbers && (
                         <span
                           className="select-none pr-3 pl-3 text-right tabular-nums text-[11px] leading-6"
                           style={{ color: "oklch(0.65 0 0)", backgroundColor: codeSurface }}
                         >
                           {lineNumber}
                         </span>
-                      ) : null}
+                      )}
                       <span
                         className={cn(
                           "pr-4 pl-2 leading-6 overflow-hidden",
