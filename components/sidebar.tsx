@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
+  SidebarGroup, 
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
@@ -22,47 +22,51 @@ import {
 
 // Import Lucide icons
 import {
-  Home,
+  Code,
   Camera,
   Rocket,
   GitCompare,
-  Sparkles,
+  Drone,
   Cog,
-  Users,
+  Boxes,  
   PlusCircle,
   Settings,
+  GalleryVerticalEnd,
+  Wrench,
 } from 'lucide-react';
 
 // Map icon names to Lucide components
 const IconMap: { [key: string]: React.ElementType } = {
-  home: Home,
+  code: Code,
   camera: Camera,
   rocket: Rocket,
   diff: GitCompare,
-  sparkles: Sparkles,
+  drone: Drone,
   cog: Cog,
-  users: Users,
+  boxes: Boxes,
   settings: Settings,
   plus: PlusCircle,
+  galleryVerticalEnd: GalleryVerticalEnd,
+  wrench: Wrench,
 };
 
 // Navigation data
 const globalNavItems = [
-  { id: "projects", label: "Projects", icon: "home", route: "/dashboard/projects" },
+  { id: "projects", label: "Projects", icon: "galleryVerticalEnd", route: "/dashboard/projects" },
 ];
 
 const getProjectNavItems = (projectId: string) => [
-  { id: "code", label: "Code", icon: "home", route: `/dashboard/projects/${projectId}/code` },
+  { id: "code", label: "Code", icon: "code", route: `/dashboard/projects/${projectId}/code` },
   { id: "snapshots", label: "Snapshots", icon: "camera", route: `/dashboard/projects/${projectId}/snapshots` },
   { id: "deployments", label: "Deployments", icon: "rocket", route: `/dashboard/projects/${projectId}/deployments` },
   { id: "diffs", label: "Diffs", icon: "diff", route: `/dashboard/projects/${projectId}/diffs` },
-  { id: "ai", label: "AI Explain", icon: "sparkles", route: `/dashboard/projects/${projectId}/ai` },
-  { id: "project-settings", label: "Settings", icon: "cog", route: `/dashboard/projects/${projectId}/settings` },
+  { id: "ai", label: "AI", icon: "drone", route: `/dashboard/projects/${projectId}/ai` },
+  { id: "project-settings", label: "Settings", icon: "wrench", route: `/dashboard/projects/${projectId}/settings` },
 ];
 
 const accountNavItems = [
   { id: "account-settings", label: "Settings", icon: "settings", route: "/dashboard/settings" },
-  { id: "team-management", label: "Team", icon: "users", route: "/dashboard/team" },
+  { id: "team-management", label: "Team", icon: "boxes", route: "/dashboard/team" },
 ];
 
 // Sidebar Component - Uses shadcn/ui sidebar hooks properly
