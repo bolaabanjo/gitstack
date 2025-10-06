@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { FileExplorer } from "@/components/file-explorer";
+import { CLIWidget } from "@/components/cli-widget";
 
 // Enhanced metrics card component
 function MetricCard({ 
@@ -231,27 +233,6 @@ function ActivityFeedComponent() {
   );
 }
 
-// File explorer placeholder
-function FileExplorerPlaceholder() {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>File Explorer</CardTitle>
-        <CardDescription>Browse your project files and folders</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h3 className="font-medium mb-2">File explorer coming soon</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Browse and manage your project&apos;s file structure directly from the dashboard.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 // Main page component
 export default function ProjectOverviewPage({
   params,
@@ -344,7 +325,7 @@ export default function ProjectOverviewPage({
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
+    <div className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
       {/* Project Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -354,7 +335,7 @@ export default function ProjectOverviewPage({
         <ProjectHeader project={project} />
       </motion.div>
 
-      {/* Metrics Cards */}
+      {/* Quick Insights - Metrics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Snapshots"
@@ -386,24 +367,25 @@ export default function ProjectOverviewPage({
         />
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-        {/* Left Column - File Explorer */}
+      {/* Main Layout: File Explorer + Sidebars */}
+      <div className="grid gap-6 xl:grid-cols-[1fr_350px]">
+        {/* Main Content - File Explorer */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <FileExplorerPlaceholder />
+          <FileExplorer projectId={projectId} />
         </motion.div>
 
-        {/* Right Column - Snapshots & Activity */}
+        {/* Right Sidebar - CLI, Snapshots, Activity */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.3 }}
           className="space-y-6"
         >
+          <CLIWidget projectId={projectId} />
           <SnapshotTimelineComponent projectId={projectId} />
           <ActivityFeedComponent />
         </motion.div>
