@@ -1,14 +1,14 @@
 // components/sidebar.tsx
 "use client";
 
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useParams } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { useUser, UserButton } from '@clerk/nextjs';
+import React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useParams } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { useUser, UserButton } from "@clerk/nextjs";
 import {
   Tooltip,
   TooltipContent,
@@ -16,7 +16,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// Import Lucide icons
 import {
   Home,
   Camera,
@@ -28,14 +27,12 @@ import {
   PlusCircle,
   Settings,
   Boxes,
-} from 'lucide-react';
+} from "lucide-react";
 
-// Define the interface for Sidebar component props
 interface SidebarProps {
   isCollapsed: boolean;
 }
 
-// Map icon names to Lucide components
 const IconMap: { [key: string]: React.ElementType } = {
   home: Home,
   camera: Camera,
@@ -49,12 +46,10 @@ const IconMap: { [key: string]: React.ElementType } = {
   boxes: Boxes,
 };
 
-// Global navigation items
 const globalNavItems = [
   { id: "projects", label: "Projects", icon: "home", route: "/dashboard/projects" },
 ];
 
-// Project-specific navigation items
 const getProjectNavItems = (projectId: string) => [
   { id: "overview", label: "Overview", icon: "home", route: `/dashboard/projects/${projectId}/overview` },
   { id: "snapshots", label: "Snapshots", icon: "camera", route: `/dashboard/projects/${projectId}/snapshots` },
@@ -64,36 +59,43 @@ const getProjectNavItems = (projectId: string) => [
   { id: "project-settings", label: "Settings", icon: "cog", route: `/dashboard/projects/${projectId}/settings` },
 ];
 
-// Account navigation items
 const accountNavItems = [
   { id: "account-settings", label: "Settings", icon: "settings", route: "/dashboard/settings" },
   { id: "team-management", label: "Team", icon: "users", route: "/dashboard/team" },
 ];
 
-// Navigation button component with tooltip support
-function NavButton({ 
-  item, 
-  isActive, 
-  isCollapsed 
-}: { 
-  item: { id: string; label: string; icon: string; route: string }; 
-  isActive: boolean; 
+function NavButton({
+  item,
+  isActive,
+  isCollapsed,
+}: {
+  item: { id: string; label: string; icon: string; route: string };
+  isActive: boolean;
   isCollapsed: boolean;
 }) {
   const IconComponent = IconMap[item.icon];
-  
+
   const button = (
     <Link href={item.route} className="w-full">
       <Button
         variant="ghost"
         className={cn(
-          "w-full text-sm font-normal transition-all",
+          "group text-sm font-normal transition-all flex items-center",
           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
           isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
-          isCollapsed ? "justify-center px-2 h-10 w-10" : "justify-start px-3 h-9"
+          isCollapsed
+            ? "justify-center w-12 h-12 p-0"
+            : "justify-start w-full px-3 h-10"
         )}
       >
-        {IconComponent && <IconComponent className={cn("h-4 w-4 flex-shrink-0", !isCollapsed && "mr-3")} />}
+        {IconComponent && (
+          <IconComponent
+            className={cn(
+              "shrink-0 text-current transition-transform duration-150",
+              isCollapsed ? "h-5 w-5 group-hover:scale-110" : "h-4 w-4 mr-3"
+            )}
+          />
+        )}
         {!isCollapsed && <span className="truncate">{item.label}</span>}
       </Button>
     </Link>
@@ -103,9 +105,7 @@ function NavButton({
     return (
       <TooltipProvider delayDuration={0}>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {button}
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
           <TooltipContent side="right" className="font-normal">
             {item.label}
           </TooltipContent>
@@ -117,34 +117,35 @@ function NavButton({
   return button;
 }
 
-// Sidebar Component
 export default function Sidebar({ isCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const params = useParams();
-  const projectId = typeof params.projectId === 'string' ? params.projectId : null;
+  const projectId = typeof params.projectId === "string" ? params.projectId : null;
 
   const { user, isSignedIn } = useUser();
+  const projectNavItems = projectId ? getProjectNavItems(projectId) : [];
 
   const handleNewSnapshot = () => {
     console.log("Open New Snapshot Modal");
   };
 
-  const userDisplayName = user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
+  const userDisplayName =
+    user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
   const userEmail = user?.emailAddresses[0]?.emailAddress;
-
-  const projectNavItems = projectId ? getProjectNavItems(projectId) : [];
 
   return (
     <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Logo Section */}
-      <div className={cn(
-        "flex items-center border-b border-border transition-all",
-        isCollapsed ? "h-16 justify-center px-2" : "h-16 px-4 space-x-2"
-      )}>
-        <Link href="/dashboard" className={cn(
-          "flex items-center",
-          isCollapsed ? "justify-center" : "space-x-2"
-        )}>
+      <div
+        className={cn(
+          "flex items-center border-b border-border transition-all",
+          isCollapsed ? "h-16 justify-center px-2" : "h-16 px-4 space-x-2"
+        )}
+      >
+        <Link
+          href="/dashboard"
+          className={cn("flex items-center", isCollapsed ? "justify-center" : "space-x-2")}
+        >
           <Image
             src="/sdark.png"
             alt="Gitstack Logo"
@@ -161,7 +162,13 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
 
       {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto py-4">
-        <nav className={cn("flex flex-col space-y-1", isCollapsed ? "px-2" : "px-3")}>
+        <nav
+          className={cn(
+            "flex flex-col space-y-1",
+            isCollapsed ? "px-2" : "px-3"
+          )}
+          role="navigation"
+        >
           {/* Global Navigation */}
           <div className="pb-2">
             {!isCollapsed && (
@@ -181,7 +188,7 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
             </div>
           </div>
 
-          {/* Project-Specific Navigation */}
+          {/* Project Navigation */}
           {projectId && projectNavItems.length > 0 && (
             <>
               <Separator className="my-2" />
@@ -233,17 +240,15 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
           <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button 
-                  onClick={handleNewSnapshot} 
+                <Button
+                  onClick={handleNewSnapshot}
                   size="icon"
-                  className="w-10 h-10"
+                  className="w-12 h-12 p-0 flex items-center justify-center"
                 >
-                  <PlusCircle className="h-4 w-4" />
+                  <PlusCircle className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
-                New Snapshot
-              </TooltipContent>
+              <TooltipContent side="right">New Snapshot</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         ) : (
@@ -256,16 +261,20 @@ export default function Sidebar({ isCollapsed }: SidebarProps) {
 
       {/* User Profile */}
       {isSignedIn && (
-        <div className={cn(
-          "border-t border-border",
-          isCollapsed ? "p-2 flex justify-center" : "p-3 flex items-center space-x-3"
-        )}>
-          <UserButton 
+        <div
+          className={cn(
+            "border-t border-border",
+            isCollapsed
+              ? "p-2 flex justify-center"
+              : "p-3 flex items-center space-x-3"
+          )}
+        >
+          <UserButton
             afterSignOutUrl="/"
             appearance={{
               elements: {
-                avatarBox: isCollapsed ? "w-8 h-8" : "w-9 h-9"
-              }
+                avatarBox: isCollapsed ? "w-10 h-10" : "w-9 h-9",
+              },
             }}
           />
           {!isCollapsed && (
