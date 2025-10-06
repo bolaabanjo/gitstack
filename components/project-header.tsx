@@ -1,4 +1,6 @@
 // components/project-header.tsx
+"use client"; // Add this directive if not already present
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,26 +20,29 @@ import {
   Trash2,
   Settings,
 } from "lucide-react";
-import Image from "next/image"; // Import Image component
+import Image from "next/image";
+import { useUser } from "@clerk/nextjs"; // Import useUser
 
 interface ProjectHeaderProps {
   project: Project;
-  onDeleteProject: (projectId: string) => void; // Prop for delete action
+  onDeleteProject: (projectId: string) => void;
 }
 
 export function ProjectHeader({ project, onDeleteProject }: ProjectHeaderProps) {
-  // Placeholder for last commit message and timestamp
-  const lastCommitMessage = "Initial commit";
-  const lastCommitTimestamp = new Date(); // Replace with actual commit timestamp
+  const { user } = useUser(); // Get current user from Clerk
 
-  // Placeholder for contributors
+  const lastCommitMessage = "Initial commit";
+  const lastCommitTimestamp = new Date();
+
   const contributors = [
     { id: "1", avatar: "https://github.com/shadcn.png" },
     { id: "2", avatar: "https://github.com/vercel.png" },
   ];
 
-  // Placeholder for user avatar (replace with actual user avatar logic if available)
-  const userAvatarUrl = "https://source.unsplash.com/random/32x32?person"; // Example placeholder avatar
+  // Use the actual user's profile image if available from Clerk
+  // Fallback to a static, known-good placeholder if Clerk user image is not available.
+  // Using a local asset or a stable CDN image is better than dynamic 'random' URLs.
+  const userAvatarUrl = user?.imageUrl || "/fav.png"; // Using your existing fav.png as a safe fallback
 
   return (
     <div className="flex items-start justify-between space-y-2">
@@ -46,11 +51,11 @@ export function ProjectHeader({ project, onDeleteProject }: ProjectHeaderProps) 
           {/* User Avatar - using Next.js Image component */}
           <Image
             src={userAvatarUrl}
-            alt="User Avatar"
+            alt={user?.fullName || "User Avatar"} // Better alt text
             width={32}
             height={32}
-            className="rounded-full self-center" // Ensure alignment
-            priority // Prioritize loading of the avatar
+            className="rounded-full self-center"
+            priority
           />
           <h2 className="text-3xl font-bold tracking-tight">
             {project.name}
@@ -66,7 +71,7 @@ export function ProjectHeader({ project, onDeleteProject }: ProjectHeaderProps) 
         <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
             <GitBranch className="h-4 w-4" />
-            <span>main</span> {/* Placeholder for branch name */}
+            <span>main</span>
           </div>
           <div>
             Last commit: &quot;{lastCommitMessage}&quot; &mdash;{" "}
@@ -74,12 +79,11 @@ export function ProjectHeader({ project, onDeleteProject }: ProjectHeaderProps) 
           </div>
           <div className="flex items-center gap-2">
             {contributors.map((contributor) => (
-              // Use Next.js Image component for contributor avatars
               <Image
                 key={contributor.id}
                 src={contributor.avatar}
                 alt={`Contributor ${contributor.id}`}
-                width={24} // Smaller size for contributor avatars
+                width={24}
                 height={24}
                 className="h-6 w-6 rounded-full"
                 priority
