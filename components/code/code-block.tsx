@@ -6,16 +6,6 @@ import { codeTheme, codeSurface, codeSurfaceSoft, codeBorder } from "@/component
 import { CopyButton } from "@/components/code/copy-button";
 import { cn } from "@/lib/utils";
 
-// ✅ Extend language support
-import "prismjs/components/prism-python";
-import "prismjs/components/prism-go";
-import "prismjs/components/prism-rust";
-import "prismjs/components/prism-java";
-import "prismjs/components/prism-c";
-import "prismjs/components/prism-cpp";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-yaml";
-import "prismjs/components/prism-markdown";
 
 type HighlightChildArgs = {
   className: string;
