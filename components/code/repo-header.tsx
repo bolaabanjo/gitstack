@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Project, Contributor } from "@/lib/api"; // Ensure Contributor is imported
+import { Project, Contributor } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +23,7 @@ import { useUser } from "@clerk/nextjs";
 
 interface RepoHeaderProps {
   project?: Project;
-  contributors?: Contributor[]; // Correctly typed as Contributor[]
+  contributors?: Contributor[];
   onDeleteProject: (projectId: string) => void;
 }
 
@@ -33,6 +33,7 @@ export function RepoHeader({ project, contributors, onDeleteProject }: RepoHeade
   if (!project) return null;
   const visibility = project.visibility === "public" ? "Public" : "Private";
 
+  // Use the actual user's profile image if available from Clerk
   const userAvatarUrl = user?.imageUrl || "/sdark.png";
 
   return (
@@ -62,7 +63,6 @@ export function RepoHeader({ project, contributors, onDeleteProject }: RepoHeade
           {contributors && contributors.length > 0 && (
             <div className="flex items-center gap-2 mt-2">
               {contributors.slice(0, 5).map((c) => (
-                // Assuming c.id, c.name, c.email are correctly typed from Contributor
                 <div key={c.id} className="text-xs text-muted-foreground">
                   {c.name || c.email} ({c.commits})
                 </div>
