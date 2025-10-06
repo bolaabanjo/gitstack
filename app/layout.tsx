@@ -8,8 +8,8 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
 // REMOVED: import ConvexClientProvider from '@/components/convex-client-provider'
-// NEW: Import QueryClient and QueryClientProvider
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+// NEW: Import QueryProvider
+import { QueryProvider } from '@/components/query-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -20,9 +20,6 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
-
-// NEW: Create a QueryClient instance outside the component
-const queryClient = new QueryClient();
 
 export const metadata: Metadata = {
   title: 'Gitstack',
@@ -49,8 +46,8 @@ export default function RootLayout({
       {/* REMOVED: <ConvexClientProvider> */}
         <html lang="en" suppressHydrationWarning>
         <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}      >
-            {/* NEW: Wrap ThemeProvider with QueryClientProvider */}
-            <QueryClientProvider client={queryClient}>
+            {/* NEW: Wrap ThemeProvider with QueryProvider */}
+            <QueryProvider>
               <ThemeProvider
                 attribute="class"
                 defaultTheme="system"
@@ -60,7 +57,7 @@ export default function RootLayout({
                 {children}
                 <Toaster />
               </ThemeProvider>
-            </QueryClientProvider> {/* NEW: Closing QueryClientProvider */}
+            </QueryProvider> {/* NEW: Closing QueryProvider */}
           </body>
         </html>
       {/* REMOVED: </ConvexClientProvider> */}
