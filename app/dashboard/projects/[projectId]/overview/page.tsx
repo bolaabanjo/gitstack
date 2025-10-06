@@ -9,11 +9,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getProjectById, getSnapshots, Project, Snapshot } from '@/lib/api'; // Corrected import
+import { getProjectById, getSnapshots, Project, Snapshot } from '@/lib/api';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ProjectHeader } from "@/components/project-header";
 import { Skeleton } from "@/components/ui/skeleton";
-// Removed: import { useProject } from '@/app/dashboard/projects/[projectId]/layout'; // No longer needed as data is fetched here
 
 // --- Placeholder Components for Dashboard Sections ---
 
@@ -111,15 +110,35 @@ export default function ProjectOverviewPage({
   const { projectId } = params;
   const { isSignedIn, isLoaded } = useUser(); // Used for authentication checks
 
+  // Hooks must be called unconditionally at the top level
+  const searchParams = useSearchParams(); // MOVED UP
   const {
     data: project,
     isLoading: isLoadingProject,
     error: projectError,
   } = useQuery<Project, Error>({
     queryKey: ["project", projectId],
-    queryFn: () => getProjectById(projectId), // Ensure queryFn is correctly set
-    enabled: !!projectId, // Only enable query when projectId is available
+    queryFn: () => getProjectById(projectId),
+    enabled: !!projectId,
   });
+
+  // Effect to show welcome toast on successful auth and project load
+  useEffect(() => { // MOVED UP
+    if (searchParams.get('auth_success') === 'true' && project) { // Ensure project is loaded
+      toast("Welcome back to Gitstack! 🎉", {
+        description: `You are now viewing the dashboard for ${project.name}.`,
+        duration: 8000,
+      });
+
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('auth_success');
+      const newUrl = `${window.location.pathname}${
+        newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
+      }`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams, project]);
+
 
   // Handle loading state for Clerk user data
   if (!isLoaded) {
@@ -176,26 +195,6 @@ export default function ProjectOverviewPage({
     );
   }
 
-  // Effect to show welcome toast on successful auth and project load
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    if (searchParams.get('auth_success') === 'true') {
-      toast("Welcome back to Gitstack! 🎉", {
-        description: `You are now viewing the dashboard for ${project.name}.`,
-        duration: 8000,
-      });
-
-      // Clean up the URL param to prevent toast on subsequent loads
-      const newSearchParams = new URLSearchParams(searchParams.toString());
-      newSearchParams.delete('auth_success');
-      const newUrl = `${window.location.pathname}${
-        newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
-      }`;
-      window.history.replaceState({}, '', newUrl);
-    }
-  }, [searchParams, project]);
-
-
   return (
     <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
       <ProjectHeader project={project} />
@@ -203,7 +202,7 @@ export default function ProjectOverviewPage({
       {/* Quick Insights Bar Placeholder */}
       <OverviewComponentPlaceholder project={project} />
 
-      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_300px]"> {/* Adjusted grid for more content */}
+      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_300px]">
         {/* Main content area for file explorer */}
         <div>
           {/* Placeholder for File Explorer */}
