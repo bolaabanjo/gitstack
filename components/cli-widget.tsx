@@ -1,47 +1,47 @@
-    // components/cli-widget.tsx
-    "use client";
+   "use client";
 
-    import { useState } from "react";
-    import { motion } from "framer-motion";
-    import {
-      Terminal,
-      Copy,
-      Check,
-      RefreshCw,
-      GitCommit,
-      Upload,
-      Download,
-      Clock,
-      AlertCircle,
-      CheckCircle2,
-      XCircle,
-    } from "lucide-react";
-    import {
-      Card,
-      CardContent,
-      CardDescription,
-      CardHeader,
-      CardTitle,
-    } from "@/components/ui/card";
-    import { Button } from "@/components/ui/button";
-    import { Badge } from "@/components/ui/badge";
-    // Removed: import { cn } from "@/lib/utils"; // No longer used
-    import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Terminal,
+  Copy,
+  Check,
+  RefreshCw,
+  GitCommit,
+  Upload,
+  Download,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
-    interface CLIActivity {
-      id: string;
-      command: string;
-      status: "success" | "pending" | "error";
-      timestamp: Date;
-      message: string;
-    }
+interface CLIActivity {
+  id: string;
+  command: string;
+  status: "success" | "pending" | "error";
+  timestamp: Date;
+  message: string;
+}
 
-    interface CLIWidgetProps {
-      projectId: string; // This prop is defined but not directly used in the component's render logic
-    }
+interface CLIWidgetProps {
+  // projectId: string; // Removed or renamed to _projectId as it's not directly used
+  _projectId?: string; // Renamed to _projectId to indicate it's unused but passed
+}
 
-    export function CLIWidget({ projectId }: CLIWidgetProps) { // projectId is used implicitly by context or will be used by real API calls
-      const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+export function CLIWidget({ _projectId }: CLIWidgetProps) { // Destructure as _projectId
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
 
       // Mock CLI activities - replace with real API data
       const mockActivities: CLIActivity[] = [

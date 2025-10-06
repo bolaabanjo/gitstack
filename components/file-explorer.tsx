@@ -1,43 +1,43 @@
-    // components/file-explorer.tsx
-    "use client";
+// components/file-explorer.tsx
+"use client";
 
-    import { useState } from "react";
-    import { motion } from "framer-motion";
-    import {
-      File,
-      Folder,
-      FolderOpen,
-      ChevronRight,
-      ChevronDown,
-      Search,
-      Plus,
-      Upload,
-      FileText,
-      FileCode,
-      Image as ImageIcon,
-      FileJson,
-      MoreHorizontal,
-      // Removed: Clock, // No longer used
-      // Removed: HardDrive, // No longer used
-    } from "lucide-react";
-    import { Button } from "@/components/ui/button";
-    import { Input } from "@/components/ui/input";
-    import {
-      Card,
-      CardContent,
-      CardDescription,
-      CardHeader,
-      CardTitle,
-    } from "@/components/ui/card";
-    import {
-      DropdownMenu,
-      DropdownMenuContent,
-      DropdownMenuItem,
-      DropdownMenuTrigger,
-    } from "@/components/ui/dropdown-menu";
-    import { Badge } from "@/components/ui/badge";
-    import { formatDistanceToNow } from "date-fns";
-    import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  File,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
+  Search,
+  Plus,
+  Upload,
+  FileText,
+  FileCode,
+  Image as ImageIcon,
+  FileJson,
+  MoreHorizontal,
+  Clock,
+  HardDrive,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import { cn } from "@/lib/utils";
 
     // File/Folder type definitions
     interface FileNode {
@@ -229,10 +229,10 @@
     }
 
     // Main File Explorer Component
-    export function FileExplorer({ projectId }: { projectId: string }) { // projectId is not used in mock data logic
+    export function FileExplorer({ }: { }) { // Renamed to _projectId
       const [searchQuery, setSearchQuery] = useState("");
       const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
-
+    
       // Mock data - replace with real API call
       const mockFiles: FileNode[] = [
         {

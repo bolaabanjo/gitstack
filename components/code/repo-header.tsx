@@ -3,62 +3,71 @@
 
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Project } from "@/lib/api";
-import { Button } from "@/components/ui/button"; // Assuming Button is used for actions
+import { Project, Contributor } from "@/lib/api"; // Ensure Contributor is imported
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"; // Assuming Dropdown is used for actions
-import { MoreVertical, Settings, Trash2, ArrowDownToLine, ExternalLink } from "lucide-react"; // Icons
+} from "@/components/ui/dropdown-menu";
+import {
+  ArrowDownToLine,
+  ExternalLink,
+  MoreVertical,
+  Trash2,
+  Settings,
+} from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 interface RepoHeaderProps {
   project?: Project;
-  contributors?: Array<{ id: string; name: string | null; email: string; commits: string }>[];
-  onDeleteProject?: (projectId: string) => void;
-  userAvatarUrl?: string; // New prop for user avatar URL
+  contributors?: Contributor[]; // Correctly typed as Contributor[]
+  onDeleteProject: (projectId: string) => void;
 }
 
-export function RepoHeader({ project, contributors, onDeleteProject, userAvatarUrl }: RepoHeaderProps) {
-  if (!project) return null;
+export function RepoHeader({ project, contributors, onDeleteProject }: RepoHeaderProps) {
+  const { user } = useUser();
 
+  if (!project) return null;
   const visibility = project.visibility === "public" ? "Public" : "Private";
+
+  const userAvatarUrl = user?.imageUrl || "/sdark.png";
 
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-start gap-3">
-        {/* User Avatar - using the new prop */}
         <Image
-          src={userAvatarUrl || "/sdark.png"} // Fallback to default if not provided
-          alt="User Avatar"
+          src={userAvatarUrl}
+          alt={user?.fullName || "User Avatar"}
           width={32}
           height={32}
-          className="rounded-full self-center" // Aligned to center
+          className="rounded-full self-center"
+          priority
         />
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{project.name}</h1>
-            <Badge variant={project.visibility === "public" ? "default" : "secondary"}>{visibility}</Badge>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {project.name}
+            </h1>
+            <Badge
+              variant={project.visibility === "public" ? "default" : "secondary"}
+              className="capitalize"
+            >
+              {visibility}
+            </Badge>
           </div>
-          {project.description && <p className="text-sm text-muted-foreground mt-1">{project.description}</p>}
+          {project.description && <p className="text-muted-foreground mt-1">{project.description}</p>}
           {contributors && contributors.length > 0 && (
             <div className="flex items-center gap-2 mt-2">
               {contributors.slice(0, 5).map((c) => (
-                // You might want to use an actual Avatar component here for consistency
-                <Image
-                  key={(c as any).id}
-                  src={userAvatarUrl || "/sdark.png"} // Placeholder for contributor avatar
-                  alt={`Contributor ${(c as any).name || (c as any).email}`}
-                  width={24} // Smaller for contributors
-                  height={24}
-                  className="rounded-full"
-                />
+                // Assuming c.id, c.name, c.email are correctly typed from Contributor
+                <div key={c.id} className="text-xs text-muted-foreground">
+                  {c.name || c.email} ({c.commits})
+                </div>
               ))}
-              {contributors.length > 5 && (
-                <span className="text-xs text-muted-foreground">+{contributors.length - 5}</span>
-              )}
+              {contributors.length > 5 && <div className="text-xs text-muted-foreground">+{contributors.length - 5} more</div>}
             </div>
           )}
         </div>
@@ -86,18 +95,14 @@ export function RepoHeader({ project, contributors, onDeleteProject, userAvatarU
               <Settings className="mr-2 h-4 w-4" />
               Project Settings
             </DropdownMenuItem>
-            {onDeleteProject && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => onDeleteProject(project.id)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Project
-                </DropdownMenuItem>
-              </>
-            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => onDeleteProject(project.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Project
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
