@@ -9,21 +9,21 @@ import React, {
   ReactNode,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getProjectById, Project } from '@/lib/api';
+import { getProjectById, Project } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-// NEW: Import Sidebar components and context from components/ui/sidebar
+// Sidebar and context
 import {
-  Sidebar as UISidebar, // Alias to avoid naming conflict with your custom Sidebar
+  Sidebar as UISidebar,
   SidebarProvider,
   SidebarInset,
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// NEW: Import your custom Sidebar and Topbar components
-import SidebarComponent from "@/components/sidebar"; // Your main functional sidebar
-import TopbarComponent from "@/components/topbar";   // Your main functional topbar
+// Custom components
+import SidebarComponent from "@/components/sidebar";
+import TopbarComponent from "@/components/topbar";
 
 // --- Types ---
 interface ProjectContextType {
@@ -38,7 +38,9 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function useProject(): ProjectContextType {
   const context = useContext(ProjectContext);
-  if (!context) throw new Error("useProject must be used within a ProjectProvider");
+  if (!context) {
+    throw new Error("useProject must be used within a ProjectProvider");
+  }
   return context;
 }
 
@@ -47,7 +49,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
 
-  const projectId = typeof params?.projectId === "string" ? params.projectId : null;
+  const projectId =
+    typeof params?.projectId === "string" ? params.projectId : null;
 
   const [project, setProject] = useState<Project | null>(null);
   const [isLoadingProject, setIsLoadingProject] = useState(true);
@@ -58,25 +61,31 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       if (!projectId) {
         setError("No project ID provided.");
         setIsLoadingProject(false);
-        router.replace("/dashboard/projects"); // Redirect if no ID
+        router.replace("/dashboard/projects");
         return;
       }
 
       setIsLoadingProject(true);
       setError(null);
+
       try {
         const fetchedProject = await getProjectById(projectId);
         setProject(fetchedProject);
       } catch (err: unknown) {
         console.error("Failed to fetch project by ID:", err);
-        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while loading project details.";
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "An unexpected error occurred while loading project details.";
+
         setError(errorMessage);
-        toast.error("Error loading project", { // Updated toast message
+        toast.error("Error loading project", {
           description: errorMessage,
           duration: 5000,
         });
+
         setProject(null);
-        router.replace("/dashboard/projects"); // Redirect on error
+        router.replace("/dashboard/projects");
       } finally {
         setIsLoadingProject(false);
       }
@@ -85,7 +94,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     fetchProjectData();
   }, [projectId, router]);
 
-  // --- Loading state for the entire layout ---
+  // --- Loading state ---
   if (isLoadingProject) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
@@ -95,15 +104,18 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // --- Error state (redirect on error is handled in useEffect) ---
+  // --- Error state ---
   if (error || !project) {
-    // If there's an error or no project, and we're not loading, show a fallback message
-    // (redirect has already been triggered by useEffect)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
         <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
-        <p className="text-lg">{error || "The requested project could not be loaded or does not exist."}</p>
-        <p className="text-muted-foreground mt-4">You will be redirected shortly.</p>
+        <p className="text-lg">
+          {error ||
+            "The requested project could not be loaded or does not exist."}
+        </p>
+        <p className="text-muted-foreground mt-4">
+          You will be redirected shortly.
+        </p>
       </div>
     );
   }
@@ -116,27 +128,39 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     error: null,
   };
 
+  // --- Final Layout ---
   return (
     <ProjectContext.Provider value={contextValue}>
-      <SidebarProvider defaultOpen={true}> {/* Manages sidebar state */}
-        <div className="flex min-h-screen w-full"> {/* Main flex container for sidebar + content */}
-          {/* Main Sidebar */}
-          <UISidebar>
-            <SidebarComponent isCollapsed={useSidebar().state === "collapsed"} />
-          </UISidebar>
-
-          {/* Main Content Area with Topbar and children */}
-          <SidebarInset> {/* Automatically adjusts content based on sidebar */}
-            <TopbarComponent
-              toggleSidebar={useSidebar().toggleSidebar}
-              isSidebarCollapsed={useSidebar().state === "collapsed"}
-            />
-            <main className="flex-1 overflow-auto bg-background text-foreground">
-              {children}
-            </main>
-          </SidebarInset>
-        </div>
+      <SidebarProvider defaultOpen={true}>
+        {/* Get sidebar context once, not conditionally */}
+        <SidebarContent>{children}</SidebarContent>
       </SidebarProvider>
     </ProjectContext.Provider>
+  );
+}
+
+// --- SidebarContent component ---
+// We split this out so that useSidebar() is always called under SidebarProvider.
+function SidebarContent({ children }: { children: ReactNode }) {
+  const sidebar = useSidebar();
+
+  return (
+    <div className="flex min-h-screen w-full">
+      {/* Sidebar */}
+      <UISidebar>
+        <SidebarComponent isCollapsed={sidebar.state === "collapsed"} />
+      </UISidebar>
+
+      {/* Main content */}
+      <SidebarInset>
+        <TopbarComponent
+          toggleSidebar={sidebar.toggleSidebar}
+          isSidebarCollapsed={sidebar.state === "collapsed"}
+        />
+        <main className="flex-1 overflow-auto bg-background text-foreground">
+          {children}
+        </main>
+      </SidebarInset>
+    </div>
   );
 }
