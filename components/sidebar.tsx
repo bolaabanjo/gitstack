@@ -52,7 +52,7 @@ const globalNavItems = [
 ];
 
 const getProjectNavItems = (projectId: string) => [
-  { id: "overview", label: "Overview", icon: "home", route: `/dashboard/projects/${projectId}/overview` },
+  { id: "code", label: "Code", icon: "home", route: `/dashboard/projects/${projectId}/code` },
   { id: "snapshots", label: "Snapshots", icon: "camera", route: `/dashboard/projects/${projectId}/snapshots` },
   { id: "deployments", label: "Deployments", icon: "rocket", route: `/dashboard/projects/${projectId}/deployments` },
   { id: "diffs", label: "Diffs", icon: "diff", route: `/dashboard/projects/${projectId}/diffs` },

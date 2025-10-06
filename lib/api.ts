@@ -23,6 +23,84 @@ export interface Project { // Exported for use in frontend components
   stats_last_deployed?: number; // UPDATED: Changed from statsLastDeployed to stats_last_deployed
 }
 
+// --- Code page types ---
+export interface Branch { id: string; name: string; head_snapshot_id: string | null }
+export interface Tag { id: string; name: string; snapshot_id: string }
+export type TreeEntry = { name: string; type: 'dir' | 'file'; size?: number }
+export type BlobResponse = {
+  path: string
+  hash: string
+  size?: number
+  mode?: number
+  content: string | null
+  mime: string | null
+  message?: string
+}
+export type ReadmeResponse = { content: string; updated_at: number | null; updated_by: string | null }
+export type Contributor = { id: string; name: string | null; email: string; commits: string }
+
+// --- Code page API ---
+export async function getBranches(projectId: string): Promise<Branch[]> {
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/branches`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch branches');
+  return r.json();
+}
+
+export async function getTags(projectId: string): Promise<Tag[]> {
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/tags`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch tags');
+  return r.json();
+}
+
+export async function getTree(
+  projectId: string,
+  params: { branch?: string; path?: string } = {}
+): Promise<TreeEntry[]> {
+  const q = new URLSearchParams();
+  if (params.branch) q.set('branch', params.branch);
+  if (params.path) q.set('path', params.path);
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/tree?${q.toString()}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch tree');
+  return r.json();
+}
+
+export async function getBlob(
+  projectId: string,
+  params: { branch?: string; path: string }
+): Promise<BlobResponse> {
+  const q = new URLSearchParams();
+  if (params.branch) q.set('branch', params.branch);
+  q.set('path', params.path);
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/blob?${q.toString()}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch blob');
+  return r.json();
+}
+
+export async function getReadmeApi(projectId: string, branch = 'main'): Promise<ReadmeResponse> {
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/readme?branch=${encodeURIComponent(branch)}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch readme');
+  return r.json();
+}
+
+export async function updateReadmeApi(
+  projectId: string,
+  body: { branch?: string; content: string; userId?: string }
+): Promise<ReadmeResponse> {
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/readme`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error('Failed to update readme');
+  return r.json();
+}
+
+export async function getContributorsApi(projectId: string): Promise<Contributor[]> {
+  const r = await fetch(`${API_BASE_URL}/projects/${projectId}/contributors`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('Failed to fetch contributors');
+  return r.json();
+}
+
 interface UserData {
   clerkUserId: string;
   email: string;
