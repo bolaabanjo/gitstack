@@ -18,6 +18,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { FileExplorer } from "@/components/file-explorer";
 import { CLIWidget } from "@/components/cli-widget";
+import { DeploymentStatus } from "@/components/deployment-status";
+import { ObservabilitySection } from "@/components/analytics-card";
+import { FirewallWidget } from "@/components/firewall-widget";
 
 // Enhanced metrics card component
 function MetricCard({ 
@@ -325,71 +328,55 @@ export default function ProjectOverviewPage({
   }
 
   return (
-    <div className="flex-1 p-4 md:p-6 lg:p-8 space-y-6">
-      {/* Project Header */}
+    <div className="flex-1 space-y-8 p-4 md:p-6 lg:p-8 animate-in fade-in duration-500">
+      {/* Project Header - Vercel Style */}
+      <ProjectHeader project={project} />
+
+      {/* Deployment Status - Like Vercel's Production Deployment Card */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
       >
-        <ProjectHeader project={project} />
+        <DeploymentStatus />
       </motion.div>
 
-      {/* Quick Insights - Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Snapshots"
-          value={project.stats_snapshots || 0}
-          icon={Camera}
-          description="All time"
-          index={0}
-        />
-        <MetricCard
-          title="Deployments"
-          value={project.stats_deployments || 0}
-          icon={Rocket}
-          description="Total deploys"
-          index={1}
-        />
-        <MetricCard
-          title="Last Deployed"
-          value={project.stats_last_deployed ? formatDistanceToNowStrict(new Date(project.stats_last_deployed)) : 'Never'}
-          icon={Clock}
-          description={project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPp') : undefined}
-          index={2}
-        />
-        <MetricCard
-          title="Status"
-          value="Active"
-          icon={TrendingUp}
-          description="All systems operational"
-          index={3}
-        />
-      </div>
+      {/* Observability Section with Analytics */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+      >
+        <ObservabilitySection />
+      </motion.div>
 
-      {/* Main Layout: File Explorer + Sidebars */}
-      <div className="grid gap-6 xl:grid-cols-[1fr_350px]">
-        {/* Main Content - File Explorer */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-        >
-          <FileExplorer projectId={projectId} />
-        </motion.div>
+      {/* Firewall & Security */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="grid gap-6 lg:grid-cols-2"
+      >
+        <FirewallWidget />
+        <ActivityFeedComponent />
+      </motion.div>
 
-        {/* Right Sidebar - CLI, Snapshots, Activity */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          className="space-y-6"
-        >
+      {/* File Explorer & CLI - Main Content */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        className="grid gap-6 xl:grid-cols-[1fr_380px]"
+      >
+        {/* File Explorer - Main */}
+        <FileExplorer projectId={projectId} />
+
+        {/* Right Sidebar - CLI & Snapshots */}
+        <div className="space-y-6">
           <CLIWidget projectId={projectId} />
           <SnapshotTimelineComponent projectId={projectId} />
-          <ActivityFeedComponent />
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
