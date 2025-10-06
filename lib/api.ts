@@ -58,6 +58,45 @@ export interface CliAuthStatus {
   message?: string; // For not_found status
 }
 
+// NEW: Interfaces for Snapshots and Snapshot Files
+export interface FileData {
+  path: string;
+  hash: string;
+  size?: number; // Optional
+  mode?: number; // Optional
+}
+
+export interface SnapshotData {
+  projectId: string;
+  userId: string;
+  title?: string;
+  description?: string;
+  timestamp: number;
+  externalId?: string;
+  files: FileData[];
+}
+
+export interface Snapshot {
+  id: string;
+  project_id: string;
+  user_id: string;
+  title?: string;
+  description?: string;
+  timestamp: number;
+  file_count: number;
+  external_id?: string;
+  files?: SnapshotFile[]; // Optional, included when fetching by ID
+}
+
+export interface SnapshotFile {
+  id: string;
+  snapshot_id: string;
+  path: string;
+  hash: string;
+  size?: number;
+  mode?: number;
+}
+
 export async function createOrGetUser(userData: UserData): Promise<UserResponse> {
   const response = await fetch(`${API_BASE_URL}/users/create-or-get`, {
     method: 'POST',
@@ -170,6 +209,82 @@ export async function getCliAuthRequestStatus(cliAuthToken: string): Promise<Cli
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || 'Failed to get CLI auth request status');
+  }
+
+  return response.json();
+}
+
+// NEW: Snapshot API functions
+export async function createSnapshot(snapshotData: SnapshotData): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/snapshots`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(snapshotData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create snapshot');
+  }
+
+  return response.json();
+}
+
+export async function getSnapshots(filters?: { projectId?: string; userId?: string }): Promise<Snapshot[]> {
+  const queryParams = new URLSearchParams();
+  if (filters?.projectId) {
+    queryParams.append('projectId', filters.projectId);
+  }
+  if (filters?.userId) {
+    queryParams.append('userId', filters.userId);
+  }
+  const queryString = queryParams.toString();
+  const url = `${API_BASE_URL}/snapshots${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch snapshots');
+  }
+
+  return response.json();
+}
+
+export async function getSnapshotById(snapshotId: string): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/snapshots/${snapshotId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to fetch snapshot');
+  }
+
+  return response.json();
+}
+
+export async function deleteSnapshot(snapshotId: string): Promise<{ message: string; id: string }> {
+  const response = await fetch(`${API_BASE_URL}/snapshots/${snapshotId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete snapshot');
   }
 
   return response.json();

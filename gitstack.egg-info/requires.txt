@@ -4,6 +4,8 @@ python-dotenv>=1.0.1
 rich>=13.0.0
 typer>=0.9.0
 httpx>=0.24.0
+keyring
+uuid
 
 [dev]
 pytest>=7.0

@@ -34,7 +34,6 @@ function CliAuthSuccessContent() {
       // Phase 1: Ensure Clerk user data is loaded and the user is signed in.
       if (!isLoaded || !isSignedIn || !sessionId || !user || !clerkAuthUserId) {
         if (isLoaded && !isSignedIn) {
-          // If Clerk is loaded but user is not signed in, redirect to login with original params
           router.push(`/login?${searchParams.toString()}`);
         } else {
           setMessage('Waiting for user authentication...');
@@ -88,18 +87,16 @@ function CliAuthSuccessContent() {
         });
 
         if (!cliCallbackResponse.ok) {
-          throw new Error(`CLI callback failed: ${cliCallbackResponse.statusText}`);
+          const errorText = await cliCallbackResponse.text();
+          throw new Error(`CLI callback failed: ${cliCallbackResponse.status} - ${errorText}`);
         }
 
         setStatus('success');
         setMessage('Authentication successful! You can now return to your terminal.');
         toast.success('CLI Authentication', { description: 'You are now authenticated with Gitstack CLI!' });
 
-        // Optionally redirect to dashboard after a short delay or just stay on this success page
-        // setTimeout(() => router.push('/dashboard'), 3000);
-
       } catch (error) {
-        console.error("Error during CLI authentication flow:", error);
+        console.error("Error during CLI authentication flow:", error); // Keep this for essential errors
         setStatus('error');
         setMessage(`Authentication failed: ${(error as Error).message}. Please try again from the CLI.`);
         toast.error('CLI Auth Failed', { description: (error as Error).message });
@@ -110,10 +107,9 @@ function CliAuthSuccessContent() {
     if (isLoaded && isSignedIn && sessionId && user && clerkAuthUserId) {
       handleCliAuthSuccess();
     } else if (isLoaded && !isSignedIn) {
-      // If Clerk is loaded but user is not signed in, ensure redirect to login
       const currentPath = window.location.pathname;
       const currentSearchParams = window.location.search;
-      if (!currentPath.startsWith('/login')) { // Avoid infinite redirects
+      if (!currentPath.startsWith('/login')) {
         router.push(`/login${currentSearchParams}`);
       }
     }

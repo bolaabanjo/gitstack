@@ -16,7 +16,7 @@ from .config import (
     CLI_AUTH_CALLBACK_PATH,
     CLI_AUTH_CALLBACK_PORT,
     GITSTACK_WEB_APP_URL, # Renamed from GITSTACK_WEB_URL
-    API_BASE_URL # NEW: Import API_BASE_URL
+    # API_BASE_URL is used in utils.py, not directly here.
 )
 
 # Import backend API caller and session handlers from utils.py
@@ -93,10 +93,23 @@ class CLIAuthHandler(BaseHTTPRequestHandler):
             self.wfile.write(f"Server error parsing POST data: {e}".encode())
 
     def do_GET(self):
-        """Optional: allow GET fallback for testing/debugging."""
-        self.send_response(405)
+        """Handles initial GET request from browser."""
+        # This means the browser has landed on our callback URL.
+        # We should show a message indicating that the process is ongoing.
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
         self.end_headers()
-        self.wfile.write(b" Use POST for CLI auth callback.")
+        html_response = """
+            <html>
+            <head><title>Gitstack CLI Authentication</title></head>
+            <body>
+                <h1>Processing CLI Authentication...</h1>
+                <p>Please wait while your authentication is being finalized.</p>
+                <p>If this message persists, check your terminal for further instructions or errors.</p>
+            </body>
+            </html>
+        """
+        self.wfile.write(html_response.encode())
 
 
 # -------------------------

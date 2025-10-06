@@ -5,8 +5,8 @@ import json
 from datetime import datetime, timezone
 
 # Import commands from our new modules
-from .auth import login, signup, logout, whoami # NEW: Added whoami to imports
-from .snapshots import snap, restore, delete, list_snapshots
+from .auth import login, signup, logout, whoami
+from .snapshots import snap, restore, delete, list_snapshots, debug_create_snapshot # NEW: Added debug_create_snapshot
 from .deploy import deploy, push, pull, join
 from .ai import explain, fix
 
@@ -42,22 +42,30 @@ def diff():
     respond(True, "Comparing two snapshots... (Convex integration needed)") # Use respond
     respond(True, "What changed between snapshots?") # Use respond
 
-# NEW: Add authentication commands to the main group
+# Add authentication commands to the main group
 main.add_command(login)
 main.add_command(signup)
 main.add_command(logout)
-main.add_command(whoami) # NEW: Added whoami to main commands
+main.add_command(whoami)
 
+# Add snapshot commands to the main group
 main.add_command(snap)
+main.add_command(list_snapshots)
 main.add_command(restore)
 main.add_command(delete)
-main.add_command(list_snapshots)
+main.add_command(debug_create_snapshot) # NEW: Added debug_create_snapshot to main commands
+
+# Add deployment commands to the main group
 main.add_command(deploy)
 main.add_command(push)
 main.add_command(pull)
 main.add_command(join)
+
+# Add AI commands to the main group
 main.add_command(explain)
 main.add_command(fix)
+
+# Add other utility commands
 main.add_command(make)
 main.add_command(date)
 main.add_command(time)

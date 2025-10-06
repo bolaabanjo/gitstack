@@ -27,6 +27,8 @@ Requires-Dist: python-dotenv>=1.0.1
 Requires-Dist: rich>=13.0.0
 Requires-Dist: typer>=0.9.0
 Requires-Dist: httpx>=0.24.0
+Requires-Dist: keyring
+Requires-Dist: uuid
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: black>=23.0; extra == "dev"
