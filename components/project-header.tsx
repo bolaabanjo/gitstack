@@ -12,7 +12,7 @@ import {
   GitBranch,
   ArrowDownToLine,
   ExternalLink,
-  Github,
+  // Github, // FIX: Removed unused import
   MoreVertical,
 } from "lucide-react";
 
@@ -39,10 +39,10 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             {project.name}
           </h2>
           <Badge
-            variant={project.visibility === "public" ? "default" : "secondary"} // FIX: Changed from is_public to visibility
+            variant={project.visibility === "public" ? "default" : "secondary"}
             className="capitalize"
           >
-            {project.visibility === "public" ? "Public" : "Private"} {/* FIX: Changed from is_public to visibility */}
+            {project.visibility === "public" ? "Public" : "Private"}
           </Badge>
         </div>
         <p className="text-muted-foreground">{project.description}</p>
@@ -52,7 +52,7 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
             <span>main</span> {/* Placeholder for branch name */}
           </div>
           <div>
-            Last commit: "{lastCommitMessage}" &mdash;{" "}
+            Last commit: &quot;{lastCommitMessage}&quot; &mdash;{" "} {/* FIX: Escaped double quotes */}
             {formatDistanceToNow(lastCommitTimestamp, { addSuffix: true })}
           </div>
           <div className="flex items-center gap-2">
