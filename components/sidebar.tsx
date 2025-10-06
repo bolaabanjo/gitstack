@@ -71,7 +71,7 @@ export default function Sidebar() {
   const params = useParams();
   const projectId = typeof params.projectId === 'string' ? params.projectId : null;
   const { user, isSignedIn } = useUser();
-  const { state } = useSidebar(); // Get current sidebar state
+  useSidebar(); // Get current sidebar state
 
   const userDisplayName = user?.fullName || user?.emailAddresses[0]?.emailAddress || "User";
   const userEmail = user?.emailAddresses[0]?.emailAddress;
