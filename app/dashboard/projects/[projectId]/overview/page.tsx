@@ -1,290 +1,223 @@
-// app/dashboard/projects/page.tsx
+// app/dashboard/projects/[projectId]/overview/page.tsx
 "use client";
 
+import { useEffect } from "react";
+import { useUser } from '@clerk/nextjs';
+import { useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getProjectById, getSnapshots, Project, Snapshot } from '@/lib/api';
+import { format, formatDistanceToNowStrict } from 'date-fns';
+import { ProjectHeader } from "@/components/project-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import ProjectListTopbar from "@/components/project-list-topbar";
-import {
-  createOrGetUser,
-  getProjectsByOwner,
-  type Project,
-} from "@/lib/api";
-import { motion } from "framer-motion";
-import { 
-  Camera, 
-  Rocket, 
-  Lock, 
-  Globe, 
-  ArrowRight,
-  Plus,
-  Sparkles
-} from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 
-// Enhanced skeleton loader with shimmer effect
-function ProjectCardSkeleton() {
+// --- Placeholder Components for Dashboard Sections ---
+
+// This component will be replaced by actual metrics later
+function OverviewComponentPlaceholder({ project }: { project: Project }) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border bg-card p-6 shadow-sm">
-      <div className="space-y-4">
-        <div className="flex items-start justify-between">
-          <Skeleton className="h-6 w-32" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-        </div>
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-        <div className="flex items-center justify-between pt-2">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-4 w-24" />
+    <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
+      <h2 className="text-2xl font-semibold mb-4">Project Overview: {project.name}</h2>
+      <p className="text-muted-foreground">This section will display key metrics and summaries for {project.name}.</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div className="p-4 border rounded-md">Snapshots: {project.stats_snapshots || 0}</div>
+        <div className="p-4 border rounded-md">Deployments: {project.stats_deployments || 0}</div>
+        <div className="p-4 border rounded-md">
+          Last Deployed: {project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPP') : 'N/A'}
         </div>
       </div>
-      {/* Shimmer effect */}
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-    </div>
+    </section>
   );
 }
 
-// Enhanced project card with animations
-function ProjectCard({ project, index }: { project: Project; index: number }) {
-  const isPublic = project.visibility === "public";
-  const lastUpdated = project.updated_at 
-    ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })
-    : "Recently";
+// This component will be replaced by a live activity feed later
+function ActivityFeedComponentPlaceholder({ project }: { project: Project }) {
+  return (
+    <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
+      <h2 className="text-2xl font-semibold mb-4">Activity Feed for {project.name}</h2>
+      <p className="text-muted-foreground">This section will show recent activities and events for this project.</p>
+      <ul className="mt-4 space-y-2">
+        <li className="p-2 border rounded-md">Activity 1 for {project.name}</li>
+        <li className="p-2 border rounded-md">Activity 2 for {project.name}</li>
+      </ul>
+    </section>
+  );
+}
+
+// Fetches and displays actual snapshots for the project
+function SnapshotTimelineComponent({ projectId }: { projectId: string }) {
+  const { isLoading, error, data: snapshots } = useQuery<Snapshot[], Error>({
+    queryKey: ['snapshots', projectId],
+    queryFn: () => getSnapshots({ projectId: projectId }),
+    enabled: !!projectId, // Only run query if projectId is available
+  });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
-      className="group relative"
-    >
-      <Link href={`/dashboard/projects/${project.id}/overview`}>
-        <div className="relative overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-          {/* Gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-          
-          <div className="relative space-y-4">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold tracking-tight group-hover:text-primary transition-colors">
-                  {project.name}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Updated {lastUpdated}
+    <section className="p-6 rounded-lg border bg-card text-card-foreground">
+      <h2 className="text-2xl font-semibold mb-4">Snapshots</h2>
+      <p className="text-muted-foreground mb-4">Here&apos;s a timeline of your project snapshots.</p>
+
+      {isLoading && (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <p className="ml-2 text-muted-foreground">Loading snapshots...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="text-red-500">
+          <p>Error loading snapshots: {error.message}</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (!snapshots || snapshots.length === 0) && (
+        <div className="h-32 flex items-center justify-center bg-muted rounded-md">
+          <p className="text-muted-foreground">No snapshots found for this project.</p>
+        </div>
+      )}
+
+      {!isLoading && !error && snapshots && snapshots.length > 0 && (
+        <div className="space-y-4">
+          {snapshots.map((snapshot) => (
+            <div key={snapshot.id} className="p-4 border rounded-md flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold">{snapshot.title || `Snapshot ${snapshot.id.substring(0, 8)}`}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {snapshot.file_count} files • Created {formatDistanceToNowStrict(new Date(snapshot.timestamp), { addSuffix: true })}
                 </p>
+                {snapshot.external_id && <p className="text-xs text-muted-foreground">ID: {snapshot.external_id}</p>}
               </div>
-              <Badge 
-                variant={isPublic ? "default" : "secondary"} 
-                className="flex items-center gap-1 capitalize"
-              >
-                {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                {project.visibility}
-              </Badge>
+              <Button size="sm" variant="outline" asChild>
+                <Link href={`/dashboard/projects/${projectId}/snapshots/${snapshot.id}`}>View Details</Link>
+              </Button>
             </div>
-
-            {/* Description */}
-            <p className="line-clamp-2 text-sm text-muted-foreground min-h-[2.5rem]">
-              {project.description || "No description provided."}
-            </p>
-
-            {/* Stats */}
-            <div className="flex items-center gap-4 pt-2 border-t">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Camera className="h-3.5 w-3.5" />
-                <span className="font-medium">{project.stats_snapshots ?? 0}</span>
-                <span>snapshots</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Rocket className="h-3.5 w-3.5" />
-                <span className="font-medium">{project.stats_deployments ?? 0}</span>
-                <span>deploys</span>
-              </div>
-            </div>
-
-            {/* Arrow indicator */}
-            <div className="flex items-center justify-end">
-              <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-            </div>
-          </div>
+          ))}
         </div>
-      </Link>
-    </motion.div>
+      )}
+    </section>
   );
 }
 
-// Empty state component
-function EmptyState() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center"
-    >
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-        <Sparkles className="h-8 w-8 text-primary" />
-      </div>
-      <h3 className="mb-2 text-xl font-semibold">No projects yet</h3>
-      <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-        Get started by creating your first project. Projects help you organize your work and collaborate with your team.
-      </p>
-      <Link href="/dashboard/projects/new">
-        <Button size="lg" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create your first project
-        </Button>
-      </Link>
-    </motion.div>
-  );
-}
+// Main page component
+export default function ProjectOverviewPage({
+  params,
+}: {
+  params: { projectId: string };
+}) {
+  const { projectId } = params;
+  const { isSignedIn, isLoaded } = useUser(); // Used for authentication checks
 
-export default function ProjectsIndexPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-
+  // Hooks must be called unconditionally at the top level
+  const searchParams = useSearchParams(); // MOVED UP
   const {
-    data: pgUser,
-    isLoading: isLoadingUser,
-    error: userError,
-  } = useQuery({
-    queryKey: ["pgUser", user?.id],
-    enabled: isLoaded && !!user?.id,
-    queryFn: async () => {
-      if (!user) throw new Error("User not available");
-      const primaryEmail = user.emailAddresses?.[0]?.emailAddress ?? "";
-      return await createOrGetUser({
-        clerkUserId: user.id,
-        email: primaryEmail,
-        name: user.fullName ?? undefined,
+    data: project,
+    isLoading: isLoadingProject,
+    error: projectError,
+  } = useQuery<Project, Error>({
+    queryKey: ["project", projectId],
+    queryFn: () => getProjectById(projectId),
+    enabled: !!projectId,
+  });
+
+  // Effect to show welcome toast on successful auth and project load
+  useEffect(() => { // MOVED UP
+    if (searchParams.get('auth_success') === 'true' && project) { // Ensure project is loaded
+      toast("Welcome back to Gitstack! 🎉", {
+        description: `You are now viewing the dashboard for ${project.name}.`,
+        duration: 8000,
       });
-    },
-  });
 
-  const {
-    data: projects,
-    isLoading: isLoadingProjects,
-    error: projectsError,
-  } = useQuery<Project[], Error>({
-    queryKey: ["projects", pgUser?.userId],
-    enabled: !!pgUser?.userId,
-    queryFn: () => getProjectsByOwner(pgUser!.userId),
-  });
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('auth_success');
+      const newUrl = `${window.location.pathname}${
+        newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
+      }`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams, project]);
 
-  // Loading state
+
+  // Handle loading state for Clerk user data
   if (!isLoaded) {
     return (
-      <div className="flex min-h-screen flex-col">
-        <ProjectListTopbar />
-        <div className="flex-1 p-4 md:p-8 lg:p-12">
-          <div className="mx-auto max-w-7xl">
-            <Skeleton className="mb-8 h-10 w-48" />
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ProjectCardSkeleton key={i} />
-              ))}
-            </div>
-          </div>
+      <div className="flex h-full flex-col space-y-8 p-8 md:flex">
+        <Skeleton className="h-10 w-[250px]" />
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-[500px] w-full" />
         </div>
       </div>
     );
   }
 
-  // Not signed in state
+  // Handle unauthenticated state
   if (!isSignedIn) {
     return (
-      <div className="flex min-h-screen flex-col">
-        <ProjectListTopbar />
-        <div className="flex flex-1 items-center justify-center p-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
-          >
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Lock className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="mb-3 text-3xl font-bold">Welcome to Gitstack</h1>
-            <p className="mb-8 text-muted-foreground max-w-md">
-              Sign in to access your projects and start versioning everything.
-            </p>
-            <Link href="/login">
-              <Button size="lg">Sign In</Button>
-            </Link>
-          </motion.div>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p className="text-muted-foreground mb-6">You must be signed in to view project details.</p>
+        <Link href="/login" passHref>
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Handle loading state for project data
+  if (isLoadingProject) {
+    return (
+      <div className="flex h-full flex-col space-y-8 p-8 md:flex">
+        <Skeleton className="h-10 w-[250px]" />
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-[500px] w-full" />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <ProjectListTopbar />
-      <div className="flex-1 p-4 md:p-8 lg:p-12">
-        <div className="mx-auto max-w-7xl">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Your Projects</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage and organize all your projects in one place
-              </p>
-            </div>
-            <Link href="/dashboard/projects/new">
-              <Button size="lg" className="gap-2 shadow-sm">
-                <Plus className="h-4 w-4" />
-                New Project
-              </Button>
-            </Link>
-          </motion.div>
+  // Handle project fetching errors
+  if (projectError) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <p className="text-destructive">Error loading project: {projectError.message}</p>
+      </div>
+    );
+  }
 
-          {/* Content */}
-          {isLoadingUser || isLoadingProjects ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ProjectCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : userError ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl border border-destructive/50 bg-destructive/10 p-6"
-            >
-              <p className="text-sm text-destructive">
-                Failed to resolve user: {userError.message}
-              </p>
-            </motion.div>
-          ) : projectsError ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl border border-destructive/50 bg-destructive/10 p-6"
-            >
-              <p className="text-sm text-destructive">
-                Failed to load projects: {projectsError.message}
-              </p>
-            </motion.div>
-          ) : !projects || projects.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-              {projects.map((project, index) => (
-                <ProjectCard key={project.id} project={project} index={index} />
-              ))}
-            </div>
-          )}
+  // Handle case where project is not found after loading
+  if (!project) {
+  return (
+      <div className="flex h-full items-center justify-center p-8">
+        <p className="text-muted-foreground">Project not found.</p>
+    </div>
+  );
+}
+
+  return (
+    <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
+      <ProjectHeader project={project} />
+
+      {/* Quick Insights Bar Placeholder */}
+      <OverviewComponentPlaceholder project={project} />
+
+      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_300px]">
+        {/* Main content area for file explorer */}
+        <div>
+          {/* Placeholder for File Explorer */}
+          <h3 className="text-lg font-medium mb-4">File Explorer (Coming Soon)</h3>
+          <p className="text-muted-foreground">
+            This section will display the project&apos;s file and folder structure.
+          </p>
+        </div>
+        {/* Right sidebar for Snapshot Timeline and Activity Feed */}
+        <div className="space-y-8">
+          <SnapshotTimelineComponent projectId={projectId} />
+          {/* Activity Feed Placeholder */}
+          <ActivityFeedComponentPlaceholder project={project} />
         </div>
       </div>
-    </div>
+        </div>
   );
 }
