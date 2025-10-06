@@ -206,7 +206,7 @@ export default function Sidebar() {
         {isSignedIn && (
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="flex items-center gap-2 px-2 py-1.5">
+              <div className="flex items-center gap-1 px-1 py-1">
                 <UserButton afterSignOutUrl="/" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{userDisplayName}</span>
