@@ -132,7 +132,6 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   return (
     <ProjectContext.Provider value={contextValue}>
       <SidebarProvider defaultOpen={true}>
-        {/* Get sidebar context once, not conditionally */}
         <SidebarContent>{children}</SidebarContent>
       </SidebarProvider>
     </ProjectContext.Provider>
@@ -146,7 +145,7 @@ function SidebarContent({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      {/* Sidebar */}
+      {/* Sidebar - KEY CHANGE: Added collapsible="icon" */}
       <UISidebar collapsible="icon">
         <SidebarComponent isCollapsed={sidebar.state === "collapsed"} />
       </UISidebar>
