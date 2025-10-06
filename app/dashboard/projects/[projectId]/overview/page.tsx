@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from 'lucide-react'; // Import Loader2 for loading states
 import { useProject } from '@/app/dashboard/projects/[projectId]/layout'; // Import useProject hook
 import { useQuery } from '@tanstack/react-query'; // NEW: Import useQuery
-import { getSnapshots, Snapshot } from '@/lib/api'; // NEW: Import getSnapshots and Snapshot interface
+import { getSnapshots, Project, Snapshot } from '@/lib/api'; // NEW: Import getSnapshots and Snapshot interface
 import { format, formatDistanceToNowStrict } from 'date-fns'; // For date formatting
 import { ProjectHeader } from "@/components/project-header";
 import { Skeleton } from "@/components/ui/skeleton";
