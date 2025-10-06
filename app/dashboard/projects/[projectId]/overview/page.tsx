@@ -188,12 +188,12 @@ export default function ProjectOverviewPage({
 
   // Handle case where project is not found after loading
   if (!project) {
-    return (
+  return (
       <div className="flex h-full items-center justify-center p-8">
         <p className="text-muted-foreground">Project not found.</p>
-      </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
@@ -218,6 +218,6 @@ export default function ProjectOverviewPage({
           <ActivityFeedComponentPlaceholder project={project} />
         </div>
       </div>
-    </div>
+        </div>
   );
 }
