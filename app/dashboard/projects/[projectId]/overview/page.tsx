@@ -7,97 +7,248 @@ import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Camera, Rocket, Clock, TrendingUp, Activity, FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getProjectById, getSnapshots, Project, Snapshot } from '@/lib/api';
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ProjectHeader } from "@/components/project-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-// --- Placeholder Components for Dashboard Sections ---
-
-// This component will be replaced by actual metrics later
-function OverviewComponentPlaceholder({ project }: { project: Project }) {
+// Enhanced metrics card component
+function MetricCard({ 
+  title, 
+  value, 
+  icon: Icon, 
+  description, 
+  index 
+}: { 
+  title: string; 
+  value: string | number; 
+  icon: React.ElementType; 
+  description?: string;
+  index: number;
+}) {
   return (
-    <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Project Overview: {project.name}</h2>
-      <p className="text-muted-foreground">This section will display key metrics and summaries for {project.name}.</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div className="p-4 border rounded-md">Snapshots: {project.stats_snapshots || 0}</div>
-        <div className="p-4 border rounded-md">Deployments: {project.stats_deployments || 0}</div>
-        <div className="p-4 border rounded-md">
-          Last Deployed: {project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPP') : 'N/A'}
-        </div>
-      </div>
-    </section>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: index * 0.1 }}
+    >
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {title}
+          </CardTitle>
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{value}</div>
+          {description && (
+            <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
-// This component will be replaced by a live activity feed later
-function ActivityFeedComponentPlaceholder({ project }: { project: Project }) {
+// Enhanced skeleton for metrics
+function MetricsSkeleton() {
   return (
-    <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Activity Feed for {project.name}</h2>
-      <p className="text-muted-foreground">This section will show recent activities and events for this project.</p>
-      <ul className="mt-4 space-y-2">
-        <li className="p-2 border rounded-md">Activity 1 for {project.name}</li>
-        <li className="p-2 border rounded-md">Activity 2 for {project.name}</li>
-      </ul>
-    </section>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <Skeleton className="h-4 w-24" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16 mb-1" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
 
-// Fetches and displays actual snapshots for the project
+// Enhanced snapshot timeline component
 function SnapshotTimelineComponent({ projectId }: { projectId: string }) {
   const { isLoading, error, data: snapshots } = useQuery<Snapshot[], Error>({
     queryKey: ['snapshots', projectId],
     queryFn: () => getSnapshots({ projectId: projectId }),
-    enabled: !!projectId, // Only run query if projectId is available
+    enabled: !!projectId,
   });
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Snapshots</CardTitle>
+          <CardDescription>Your project&apos;s snapshot history</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-32">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <p className="ml-2 text-sm text-muted-foreground">Loading snapshots...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Snapshots</CardTitle>
+          <CardDescription>Your project&apos;s snapshot history</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-destructive">
+            Error loading snapshots: {error.message}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!snapshots || snapshots.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Snapshots</CardTitle>
+          <CardDescription>Your project&apos;s snapshot history</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Camera className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <p className="text-sm text-muted-foreground mb-4">No snapshots yet</p>
+            <Button size="sm" variant="outline">
+              <Camera className="h-4 w-4 mr-2" />
+              Create your first snapshot
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <section className="p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Snapshots</h2>
-      <p className="text-muted-foreground mb-4">Here&apos;s a timeline of your project snapshots.</p>
-
-      {isLoading && (
-        <div className="flex items-center justify-center h-32">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p className="ml-2 text-muted-foreground">Loading snapshots...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-red-500">
-          <p>Error loading snapshots: {error.message}</p>
-        </div>
-      )}
-
-      {!isLoading && !error && (!snapshots || snapshots.length === 0) && (
-        <div className="h-32 flex items-center justify-center bg-muted rounded-md">
-          <p className="text-muted-foreground">No snapshots found for this project.</p>
-        </div>
-      )}
-
-      {!isLoading && !error && snapshots && snapshots.length > 0 && (
-        <div className="space-y-4">
-          {snapshots.map((snapshot) => (
-            <div key={snapshot.id} className="p-4 border rounded-md flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold">{snapshot.title || `Snapshot ${snapshot.id.substring(0, 8)}`}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {snapshot.file_count} files • Created {formatDistanceToNowStrict(new Date(snapshot.timestamp), { addSuffix: true })}
-                </p>
-                {snapshot.external_id && <p className="text-xs text-muted-foreground">ID: {snapshot.external_id}</p>}
-              </div>
-              <Button size="sm" variant="outline" asChild>
-                <Link href={`/dashboard/projects/${projectId}/snapshots/${snapshot.id}`}>View Details</Link>
-              </Button>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Snapshots</CardTitle>
+        <CardDescription>{snapshots.length} total snapshots</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {snapshots.slice(0, 5).map((snapshot, index) => (
+            <motion.div
+              key={snapshot.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+            >
+              <Link
+                href={`/dashboard/projects/${projectId}/snapshots/${snapshot.id}`}
+                className="group block rounded-lg border p-3 transition-all hover:border-primary/50 hover:bg-accent/50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Camera className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+                        {snapshot.title || `Snapshot ${snapshot.id.substring(0, 8)}`}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        {snapshot.file_count} files
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNowStrict(new Date(snapshot.timestamp), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                  {snapshot.external_id && (
+                    <Badge variant="secondary" className="text-xs">
+                      {snapshot.external_id.substring(0, 6)}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            </motion.div>
           ))}
         </div>
-      )}
-    </section>
+        {snapshots.length > 5 && (
+          <Button variant="ghost" className="w-full mt-4" size="sm">
+            View all snapshots
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Enhanced activity feed placeholder
+function ActivityFeedComponent() {
+  const activities = [
+    { type: "snapshot", message: "New snapshot created", time: "2 hours ago" },
+    { type: "deploy", message: "Deployed to production", time: "5 hours ago" },
+    { type: "update", message: "Project settings updated", time: "1 day ago" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Activity</CardTitle>
+        <CardDescription>Latest updates and changes</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {activities.map((activity, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              className="flex items-start gap-3 rounded-lg border p-3"
+            >
+              <Activity className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm">{activity.message}</p>
+                <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// File explorer placeholder
+function FileExplorerPlaceholder() {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>File Explorer</CardTitle>
+        <CardDescription>Browse your project files and folders</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="h-16 w-16 text-muted-foreground/50 mb-4" />
+          <h3 className="font-medium mb-2">File explorer coming soon</h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Browse and manage your project&apos;s file structure directly from the dashboard.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -108,10 +259,9 @@ export default function ProjectOverviewPage({
   params: { projectId: string };
 }) {
   const { projectId } = params;
-  const { isSignedIn, isLoaded } = useUser(); // Used for authentication checks
+  const { isSignedIn, isLoaded } = useUser();
 
-  // Hooks must be called unconditionally at the top level
-  const searchParams = useSearchParams(); // MOVED UP
+  const searchParams = useSearchParams();
   const {
     data: project,
     isLoading: isLoadingProject,
@@ -122,9 +272,8 @@ export default function ProjectOverviewPage({
     enabled: !!projectId,
   });
 
-  // Effect to show welcome toast on successful auth and project load
-  useEffect(() => { // MOVED UP
-    if (searchParams.get('auth_success') === 'true' && project) { // Ensure project is loaded
+  useEffect(() => {
+    if (searchParams.get('auth_success') === 'true' && project) {
       toast("Welcome back to Gitstack! 🎉", {
         description: `You are now viewing the dashboard for ${project.name}.`,
         duration: 8000,
@@ -139,20 +288,16 @@ export default function ProjectOverviewPage({
     }
   }, [searchParams, project]);
 
-
-  // Handle loading state for Clerk user data
   if (!isLoaded) {
     return (
-      <div className="flex h-full flex-col space-y-8 p-8 md:flex">
-        <Skeleton className="h-10 w-[250px]" />
-        <div className="flex-1 space-y-4">
-          <Skeleton className="h-[500px] w-full" />
-        </div>
+      <div className="flex-1 p-4 md:p-8 space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <MetricsSkeleton />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
-  // Handle unauthenticated state
   if (!isSignedIn) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4 text-center">
@@ -165,59 +310,104 @@ export default function ProjectOverviewPage({
     );
   }
 
-  // Handle loading state for project data
   if (isLoadingProject) {
     return (
-      <div className="flex h-full flex-col space-y-8 p-8 md:flex">
-        <Skeleton className="h-10 w-[250px]" />
-        <div className="flex-1 space-y-4">
-          <Skeleton className="h-[500px] w-full" />
-        </div>
+      <div className="flex-1 p-4 md:p-8 space-y-6">
+        <Skeleton className="h-12 w-64" />
+        <MetricsSkeleton />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
-  // Handle project fetching errors
   if (projectError) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-destructive">Error loading project: {projectError.message}</p>
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="text-destructive">Error Loading Project</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{projectError.message}</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Handle case where project is not found after loading
   if (!project) {
-  return (
+    return (
       <div className="flex h-full items-center justify-center p-8">
         <p className="text-muted-foreground">Project not found.</p>
-    </div>
-  );
-}
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
-      <ProjectHeader project={project} />
+    <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
+      {/* Project Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <ProjectHeader project={project} />
+      </motion.div>
 
-      {/* Quick Insights Bar Placeholder */}
-      <OverviewComponentPlaceholder project={project} />
-
-      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_300px]">
-        {/* Main content area for file explorer */}
-        <div>
-          {/* Placeholder for File Explorer */}
-          <h3 className="text-lg font-medium mb-4">File Explorer (Coming Soon)</h3>
-          <p className="text-muted-foreground">
-            This section will display the project&apos;s file and folder structure.
-          </p>
-        </div>
-        {/* Right sidebar for Snapshot Timeline and Activity Feed */}
-        <div className="space-y-8">
-          <SnapshotTimelineComponent projectId={projectId} />
-          {/* Activity Feed Placeholder */}
-          <ActivityFeedComponentPlaceholder project={project} />
-        </div>
+      {/* Metrics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Snapshots"
+          value={project.stats_snapshots || 0}
+          icon={Camera}
+          description="All time"
+          index={0}
+        />
+        <MetricCard
+          title="Deployments"
+          value={project.stats_deployments || 0}
+          icon={Rocket}
+          description="Total deploys"
+          index={1}
+        />
+        <MetricCard
+          title="Last Deployed"
+          value={project.stats_last_deployed ? formatDistanceToNowStrict(new Date(project.stats_last_deployed)) : 'Never'}
+          icon={Clock}
+          description={project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPp') : undefined}
+          index={2}
+        />
+        <MetricCard
+          title="Status"
+          value="Active"
+          icon={TrendingUp}
+          description="All systems operational"
+          index={3}
+        />
       </div>
-        </div>
+
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+        {/* Left Column - File Explorer */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <FileExplorerPlaceholder />
+        </motion.div>
+
+        {/* Right Column - Snapshots & Activity */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="space-y-6"
+        >
+          <SnapshotTimelineComponent projectId={projectId} />
+          <ActivityFeedComponent />
+        </motion.div>
+      </div>
+    </div>
   );
 }

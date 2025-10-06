@@ -1,15 +1,13 @@
 // app/dashboard/projects/new/page.tsx
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createProject, createOrGetUser } from '@/lib/api'; // NEW: Import createOrGetUser
+import { createProject, createOrGetUser } from '@/lib/api';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -23,10 +21,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save, Globe, Lock, Sparkles, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useUser } from '@clerk/nextjs';
-import ProjectListTopbar from '@/components/project-list-topbar'; // NEW: Import topbar
+import ProjectListTopbar from '@/components/project-list-topbar';
+import { motion } from 'framer-motion';
+import { Badge } from '@/components/ui/badge';
 
 // --- Form Schema Definition with Zod ---
 const projectFormSchema = z.object({
@@ -35,7 +35,6 @@ const projectFormSchema = z.object({
   visibility: z
   .enum(["public", "private"])
   .refine((val) => val, { message: "Project visibility is required." }),
-
 });
 
 type ProjectFormValues = z.infer<typeof projectFormSchema>;
@@ -58,6 +57,7 @@ export default function CreateNewProjectPage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
 
   // --- Autosave Effect ---
   useEffect(() => {
@@ -66,6 +66,7 @@ export default function CreateNewProjectPage() {
       try {
         const draftValues: ProjectFormValues = JSON.parse(savedDraft);
         form.reset(draftValues);
+        setHasDraft(true);
       } catch (e) {
         console.error("Failed to parse autosaved draft:", e);
         localStorage.removeItem(AUTOSAVE_KEY);
@@ -75,6 +76,7 @@ export default function CreateNewProjectPage() {
     const subscription = form.watch((value, { name, type }) => {
       if (type === 'change' && name) {
         localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(value));
+        setHasDraft(true);
       }
     });
 
@@ -92,23 +94,21 @@ export default function CreateNewProjectPage() {
 
     setIsLoading(true);
     try {
-      // Step 1: Ensure user exists in our PostgreSQL DB and get their internal UUID
       const { userId: pgUserId } = await createOrGetUser({
         clerkUserId: user.id,
         email: user.primaryEmailAddress.emailAddress,
         name: user.fullName || user.username || undefined,
       });
 
-      // Step 2: Create the project using the PostgreSQL user's UUID
       const newProject = await createProject({
         name: values.name,
         description: values.description,
         visibility: values.visibility,
-        ownerId: pgUserId, // UPDATED: Use the PostgreSQL user's UUID here
+        ownerId: pgUserId,
       });
 
-      toast.success("Stack created successfully!", {
-        description: `Stack "${values.name}" has been created.`,
+      toast.success("Project created successfully!", {
+        description: `Project "${values.name}" has been created.`,
       });
 
       localStorage.removeItem(AUTOSAVE_KEY);
@@ -131,117 +131,173 @@ export default function CreateNewProjectPage() {
   const projectSlug = projectName ? projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : '';
   const slugPreview = `gitstack.xyz/${username}/${projectSlug}`;
 
-
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       <ProjectListTopbar />
-      <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-2xl">
-        <div className="flex items-center justify-between mb-8">
-        <div className="grid grid-cols-1">
-          <h1 className="text-xl font-bold tracking-tight">Create a New Stack</h1>
-          <p>Stacks are just repos that contain a project&apos;s files and version history.</p>
-        </div>
-          <Link href="/dashboard/projects" passHref>
-            <Button variant="outline" className='rounded-full cursor-pointer'>Cancel</Button>
-          </Link>
-        </div>
+      <div className="flex-1 p-4 md:p-8 lg:p-12">
+        <div className="container mx-auto max-w-3xl">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-8"
+          >
+            <Link href="/dashboard/projects" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Projects
+            </Link>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold tracking-tight mb-2">Create a New Project</h1>
+                <p className="text-muted-foreground">
+                  Projects are version-controlled repositories that contain your files and history.
+                </p>
+                {hasDraft && (
+                  <Badge variant="secondary" className="mt-2 gap-1">
+                    <Save className="h-3 w-3" />
+                    Draft auto-saved
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </motion.div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Project Name Field */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Stack Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="My Awesome Stack" {...field} />
-                  </FormControl>
-                  {/* Slug Preview */}
-                  {projectName && (
-                    <FormDescription className="flex items-center text-sm text-muted-foreground">
-                      <span className="mr-1">Preview:</span>
-                      <span className="font-mono text-xs bg-muted p-1 rounded-sm">
-                        {slugPreview}
-                      </span>
-                    </FormDescription>
+          {/* Form */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="rounded-xl border bg-card p-6 md:p-8 shadow-sm"
+          >
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                {/* Project Name Field */}
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Project Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="My Awesome Project" 
+                          className="h-11"
+                          {...field} 
+                        />
+                      </FormControl>
+                      {projectName && (
+                        <FormDescription className="flex items-center gap-2 text-sm">
+                          <Sparkles className="h-3 w-3" />
+                          <span className="font-mono text-xs bg-muted px-2 py-1 rounded">
+                            {slugPreview}
+                          </span>
+                        </FormDescription>
+                      )}
+                      <FormDescription>
+                        This will be the primary identifier for your project.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                  <FormDescription>
-                    This will be the primary name for your stack.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                />
 
-            {/* Description Field */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="A brief description of your stack..."
-                      className="resize-y"
-                      {...field}
-                    />
-                  </FormControl>
-                  {/* Live Character Count */}
-                  <FormDescription className="flex justify-between text-muted-foreground">
-                    <span>A short description helps identify your stack.</span>
-                    <span>{descriptionCharCount}/200</span>
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                {/* Description Field */}
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="A brief description of your project..."
+                          className="resize-y min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="flex justify-between">
+                        <span>Help others understand what your project is about.</span>
+                        <span className={descriptionCharCount > 180 ? "text-orange-500" : ""}>
+                          {descriptionCharCount}/200
+                        </span>
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Visibility Field */}
-            <FormField
-              control={form.control}
-              name="visibility"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Stack Visibility</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="private" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Private (Only you and invited collaborators can see this stack)
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="public" />
-                        </FormControl>
-                        <FormLabel className="font-normal">
-                          Public (Anyone can view this stack)
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                {/* Visibility Field */}
+                <FormField
+                  control={form.control}
+                  name="visibility"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Project Visibility</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="grid gap-3"
+                        >
+                          <FormItem className="relative">
+                            <FormControl>
+                              <RadioGroupItem value="private" id="private" className="peer sr-only" />
+                            </FormControl>
+                            <FormLabel
+                              htmlFor="private"
+                              className="flex items-start gap-3 rounded-lg border-2 border-muted p-4 cursor-pointer transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                            >
+                              <Lock className="h-5 w-5 mt-0.5 text-muted-foreground peer-data-[state=checked]:text-primary" />
+                              <div className="flex-1">
+                                <p className="font-medium">Private</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Only you and invited collaborators can see this project
+                                </p>
+                              </div>
+                            </FormLabel>
+                          </FormItem>
+                          
+                          <FormItem className="relative">
+                            <FormControl>
+                              <RadioGroupItem value="public" id="public" className="peer sr-only" />
+                            </FormControl>
+                            <FormLabel
+                              htmlFor="public"
+                              className="flex items-start gap-3 rounded-lg border-2 border-muted p-4 cursor-pointer transition-all hover:border-primary/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                            >
+                              <Globe className="h-5 w-5 mt-0.5 text-muted-foreground peer-data-[state=checked]:text-primary" />
+                              <div className="flex-1">
+                                <p className="font-medium">Public</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Anyone can view this project
+                                </p>
+                              </div>
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Submit Button */}
-            <Button type="submit" disabled={isLoading} className="w-full h-12 rounded-full cursor-pointer">
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Creating stack..." : "Create stack"}
-            </Button>
-          </form>
-        </Form>
+                {/* Submit Button */}
+                <div className="flex gap-3 pt-4">
+                  <Link href="/dashboard/projects" className="flex-1">
+                    <Button type="button" variant="outline" className="w-full h-11">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button type="submit" disabled={isLoading} className="flex-1 h-11">
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading ? "Creating..." : "Create Project"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
