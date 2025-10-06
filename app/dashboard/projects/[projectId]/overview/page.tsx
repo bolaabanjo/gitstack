@@ -1,71 +1,65 @@
 // app/dashboard/projects/[projectId]/overview/page.tsx
 "use client";
 
-import { useEffect } from "react"; // FIX: Removed Suspense from import
+import { useEffect } from "react";
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from 'lucide-react'; // Import Loader2 for loading states
-import { useProject } from '@/app/dashboard/projects/[projectId]/layout'; // Import useProject hook
-import { useQuery } from '@tanstack/react-query'; // NEW: Import useQuery
-import { getSnapshots, Project, Snapshot } from '@/lib/api'; // NEW: Import getSnapshots and Snapshot interface
-import { format, formatDistanceToNowStrict } from 'date-fns'; // For date formatting
+import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getProjectById, getSnapshots, Project, Snapshot } from '@/lib/api'; // Corrected import
+import { format, formatDistanceToNowStrict } from 'date-fns';
 import { ProjectHeader } from "@/components/project-header";
 import { Skeleton } from "@/components/ui/skeleton";
-// import { Project } from '@/lib/types'; // FIX: Removed incorrect import
+// Removed: import { useProject } from '@/app/dashboard/projects/[projectId]/layout'; // No longer needed as data is fetched here
 
-// --- Placeholder Components for Dashboard Sections (mostly remain) ---
+// --- Placeholder Components for Dashboard Sections ---
 
-function OverviewComponentPlaceholder() {
-  const { project } = useProject();
+// This component will be replaced by actual metrics later
+function OverviewComponentPlaceholder({ project }: { project: Project }) {
   return (
     <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Project Overview: {project?.name}</h2>
-      <p className="text-muted-foreground">This section will display key metrics and summaries for {project?.name}.</p>
+      <h2 className="text-2xl font-semibold mb-4">Project Overview: {project.name}</h2>
+      <p className="text-muted-foreground">This section will display key metrics and summaries for {project.name}.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div className="p-4 border rounded-md">Snapshots: {project?.stats_snapshots || 0}</div>
-        <div className="p-4 border rounded-md">Deployments: {project?.stats_deployments || 0}</div>
+        <div className="p-4 border rounded-md">Snapshots: {project.stats_snapshots || 0}</div>
+        <div className="p-4 border rounded-md">Deployments: {project.stats_deployments || 0}</div>
         <div className="p-4 border rounded-md">
-          Last Deployed: {project?.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPP') : 'N/A'}
+          Last Deployed: {project.stats_last_deployed ? format(new Date(project.stats_last_deployed), 'PPP') : 'N/A'}
         </div>
       </div>
     </section>
   );
 }
 
-function ActivityFeedComponentPlaceholder() {
-  const { project } = useProject();
+// This component will be replaced by a live activity feed later
+function ActivityFeedComponentPlaceholder({ project }: { project: Project }) {
   return (
     <section className="mb-8 p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Activity Feed for {project?.name}</h2>
+      <h2 className="text-2xl font-semibold mb-4">Activity Feed for {project.name}</h2>
       <p className="text-muted-foreground">This section will show recent activities and events for this project.</p>
       <ul className="mt-4 space-y-2">
-        <li className="p-2 border rounded-md">Activity 1 for {project?.name}</li>
-        <li className="p-2 border rounded-md">Activity 2 for {project?.name}</li>
+        <li className="p-2 border rounded-md">Activity 1 for {project.name}</li>
+        <li className="p-2 border rounded-md">Activity 2 for {project.name}</li>
       </ul>
     </section>
   );
 }
 
-// UPDATED: Now fetches and displays actual snapshots
-function SnapshotTimelineComponent() {
-  const { project } = useProject();
+// Fetches and displays actual snapshots for the project
+function SnapshotTimelineComponent({ projectId }: { projectId: string }) {
   const { isLoading, error, data: snapshots } = useQuery<Snapshot[], Error>({
-    queryKey: ['snapshots', project?.id],
-    queryFn: () => getSnapshots({ projectId: project?.id }),
-    enabled: !!project?.id, // Only run query if projectId is available
+    queryKey: ['snapshots', projectId],
+    queryFn: () => getSnapshots({ projectId: projectId }),
+    enabled: !!projectId, // Only run query if projectId is available
   });
-
-  if (!project) {
-    return null; // Should ideally be handled by parent or layout
-  }
 
   return (
     <section className="p-6 rounded-lg border bg-card text-card-foreground">
-      <h2 className="text-2xl font-semibold mb-4">Snapshots for {project.name}</h2>
-      <p className="text-muted-foreground mb-4">Here&apos;s a timeline of your project snapshots.</p> {/* FIX: Escaped apostrophe */}
+      <h2 className="text-2xl font-semibold mb-4">Snapshots</h2>
+      <p className="text-muted-foreground mb-4">Here&apos;s a timeline of your project snapshots.</p>
 
       {isLoading && (
         <div className="flex items-center justify-center h-32">
@@ -98,7 +92,7 @@ function SnapshotTimelineComponent() {
                 {snapshot.external_id && <p className="text-xs text-muted-foreground">ID: {snapshot.external_id}</p>}
               </div>
               <Button size="sm" variant="outline" asChild>
-                <Link href={`/dashboard/projects/${project.id}/snapshots/${snapshot.id}`}>View Details</Link>
+                <Link href={`/dashboard/projects/${projectId}/snapshots/${snapshot.id}`}>View Details</Link>
               </Button>
             </div>
           ))}
@@ -108,108 +102,51 @@ function SnapshotTimelineComponent() {
   );
 }
 
-// --- End Updated Components ---
-
-// FIX: Removed unused ProjectOverviewPageContent function
-// function ProjectOverviewPageContent() {
-//   const { isLoaded, isSignedIn, user } = useUser();
-//   const searchParams = useSearchParams();
-//   const { project, isLoadingProject, error } = useProject(); // Consume project context
-
-//   useEffect(() => {
-//     if (searchParams.get('auth_success') === 'true') {
-//       toast("Welcome back to Gitstack! 🎉", { // Added emoji for welcome
-//         description: `You are now viewing the dashboard for ${project?.name || 'your project'}.`,
-//         duration: 8000,
-//       });
-
-//       // Clean up the URL param
-//       const newSearchParams = new URLSearchParams(searchParams.toString());
-//       newSearchParams.delete('auth_success');
-//       const newUrl = `${window.location.pathname}${
-//         newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
-//       }`;
-//       window.history.replaceState({}, '', newUrl);
-//     }
-//   }, [searchParams, project]);
-
-
-//   // Handle loading states for Clerk user data
-//   if (!isLoaded || isLoadingProject) {
-//     return (
-//       <div className="flex items-center justify-center min-h-[calc(100vh-10rem)]">
-//         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-//         <p className="text-lg text-muted-foreground ml-4">Loading project dashboard...</p>
-//       </div>
-//     );
-//   }
-
-//   // Handle unauthenticated state (should ideally be caught by layout/middleware)
-//   if (!isSignedIn) {
-//     return (
-//       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4 text-center">\
-//         <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-//         <p className="text-muted-foreground mb-6">You must be signed in to view project details.</p>
-//         <Link href="/login" passHref>
-//           <Button>Sign In</Button>
-//         </Link>
-//       </div>
-//     );
-//   }
-
-//   // Handle project loading errors (should be caught by ProjectLayout)
-//   if (error || !project) {
-//     return (
-//       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4 text-center text-red-500">
-//         <h1 className="text-3xl font-bold mb-4">Error</h1>
-//         <p className="text-lg">{error || "Project not found or accessible."}</p>
-//         <Link href="/dashboard/projects" passHref>
-//           <Button className="mt-4">Back to Projects</Button>
-//         </Link>
-//       </div>
-//     );
-//   }
-
-
-//   // --- Render Project-Specific Dashboard Content ---
-//   return (
-//     <div className="space-y-8">
-//       <h1 className="text-4xl font-extrabold tracking-tight">
-//         Project <span className="text-primary">{project.name}</span> Overview
-//       </h1>
-//       <p className="text-lg text-muted-foreground max-w-3xl">
-//         Hello, {user?.fullName || user?.emailAddresses[0]?.emailAddress || "Gitstack User"}!
-//         Here&apos;s a quick summary of your project&apos;s health and recent activity for *{project.name}*.
-//       </p>
-
-//       {/* Render the updated snapshot component and other placeholders */}
-//       <OverviewComponentPlaceholder />
-//       <ActivityFeedComponentPlaceholder />
-//       <SnapshotTimelineComponent /> {/* UPDATED: Using the new SnapshotTimelineComponent */}
-//     </div>
-//   );
-// }
-
+// Main page component
 export default function ProjectOverviewPage({
   params,
 }: {
   params: { projectId: string };
 }) {
   const { projectId } = params;
+  const { isSignedIn, isLoaded } = useUser(); // Used for authentication checks
 
   const {
     data: project,
     isLoading: isLoadingProject,
     error: projectError,
-  } = useQuery<Project, Error>({ queryKey: ["project", projectId] });
+  } = useQuery<Project, Error>({
+    queryKey: ["project", projectId],
+    queryFn: () => getProjectById(projectId), // Ensure queryFn is correctly set
+    enabled: !!projectId, // Only enable query when projectId is available
+  });
 
-  // FIX: Removed unused snapshots, isLoadingSnapshots, snapshotsError declarations
-  // const {
-  //   data: snapshots,
-  //   isLoading: isLoadingSnapshots,
-  //   error: snapshotsError,
-  // } = useQuery<Snapshot[], Error>({ queryKey: ["snapshots", projectId] });
+  // Handle loading state for Clerk user data
+  if (!isLoaded) {
+    return (
+      <div className="flex h-full flex-col space-y-8 p-8 md:flex">
+        <Skeleton className="h-10 w-[250px]" />
+        <div className="flex-1 space-y-4">
+          <Skeleton className="h-[500px] w-full" />
+        </div>
+      </div>
+    );
+  }
 
+  // Handle unauthenticated state
+  if (!isSignedIn) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] p-4 text-center">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p className="text-muted-foreground mb-6">You must be signed in to view project details.</p>
+        <Link href="/login" passHref>
+          <Button>Sign In</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  // Handle loading state for project data
   if (isLoadingProject) {
     return (
       <div className="flex h-full flex-col space-y-8 p-8 md:flex">
@@ -221,14 +158,16 @@ export default function ProjectOverviewPage({
     );
   }
 
+  // Handle project fetching errors
   if (projectError) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-destructive">Error: {projectError.message}</p>
+        <p className="text-destructive">Error loading project: {projectError.message}</p>
       </div>
     );
   }
 
+  // Handle case where project is not found after loading
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -237,24 +176,47 @@ export default function ProjectOverviewPage({
     );
   }
 
+  // Effect to show welcome toast on successful auth and project load
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('auth_success') === 'true') {
+      toast("Welcome back to Gitstack! 🎉", {
+        description: `You are now viewing the dashboard for ${project.name}.`,
+        duration: 8000,
+      });
+
+      // Clean up the URL param to prevent toast on subsequent loads
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete('auth_success');
+      const newUrl = `${window.location.pathname}${
+        newSearchParams.toString() ? '?' + newSearchParams.toString() : ''
+      }`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams, project]);
+
+
   return (
     <div className="h-full flex-1 flex-col space-y-8 p-8 md:flex">
       <ProjectHeader project={project} />
 
-      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_200px]">
+      {/* Quick Insights Bar Placeholder */}
+      <OverviewComponentPlaceholder project={project} />
+
+      <div className="grid flex-1 gap-12 md:grid-cols-[1fr_300px]"> {/* Adjusted grid for more content */}
         {/* Main content area for file explorer */}
         <div>
           {/* Placeholder for File Explorer */}
-          <h3 className="text-lg font-medium">File Explorer (Coming Soon)</h3>
+          <h3 className="text-lg font-medium mb-4">File Explorer (Coming Soon)</h3>
           <p className="text-muted-foreground">
-            This section will display the project&apos;s file and folder structure. {/* FIX: Escaped apostrophe */}
+            This section will display the project&apos;s file and folder structure.
           </p>
         </div>
-        {/* Right sidebar for Snapshot Timeline */}
-        <div>
-          <SnapshotTimelineComponent
-          // FIX: Removed props, as SnapshotTimelineComponent fetches its own data
-          />
+        {/* Right sidebar for Snapshot Timeline and Activity Feed */}
+        <div className="space-y-8">
+          <SnapshotTimelineComponent projectId={projectId} />
+          {/* Activity Feed Placeholder */}
+          <ActivityFeedComponentPlaceholder project={project} />
         </div>
       </div>
     </div>
