@@ -147,7 +147,7 @@ function SidebarContent({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen w-full">
       {/* Sidebar */}
-      <UISidebar>
+      <UISidebar collapsible="icon">
         <SidebarComponent isCollapsed={sidebar.state === "collapsed"} />
       </UISidebar>
 
