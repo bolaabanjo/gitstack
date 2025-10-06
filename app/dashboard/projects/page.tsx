@@ -23,7 +23,7 @@ import {
   Globe,
   ArrowRight,
   Plus,
-  Sparkles,
+  FolderKey,
   MoreHorizontal, // Import MoreHorizontal for dropdown
   Trash2, // Import Trash2 for delete action
 } from "lucide-react";
@@ -177,7 +177,7 @@ function EmptyState() {
       className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center"
     >
       <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-        <Sparkles className="h-8 w-8 text-primary" />
+        <FolderKey className="h-8 w-8 text-primary" />
       </div>
       <h3 className="mb-2 text-xl font-semibold">No projects yet</h3>
       <p className="mb-6 max-w-sm text-sm text-muted-foreground">
