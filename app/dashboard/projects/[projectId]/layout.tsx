@@ -9,17 +9,26 @@ import React, {
   ReactNode,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-// REMOVED: import { useQuery } from "convex/react";
-// REMOVED: import { api } from "@/convex/_generated/api";
-import { getProjectById, Project } from '@/lib/api'; // NEW: Import our API function and Project interface
+import { getProjectById, Project } from '@/lib/api';
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-// REMOVED: import { Doc, Id } from "@/convex/_generated/dataModel";
+
+// NEW: Import Sidebar components and context from components/ui/sidebar
+import {
+  Sidebar as UISidebar, // Alias to avoid naming conflict with your custom Sidebar
+  SidebarProvider,
+  SidebarInset,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+// NEW: Import your custom Sidebar and Topbar components
+import SidebarComponent from "@/components/sidebar"; // Your main functional sidebar
+import TopbarComponent from "@/components/topbar";   // Your main functional topbar
 
 // --- Types ---
 interface ProjectContextType {
-  projectId: string | null; // Changed from Id<"projects"> to string
-  project: Project | null; // Changed from Doc<"projects"> to Project
+  projectId: string | null;
+  project: Project | null;
   isLoadingProject: boolean;
   error: string | null;
 }
@@ -38,7 +47,6 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
 
-  // projectId from params will be a string, which matches our backend UUIDs
   const projectId = typeof params?.projectId === "string" ? params.projectId : null;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -57,13 +65,13 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
       setIsLoadingProject(true);
       setError(null);
       try {
-        const fetchedProject = await getProjectById(projectId); // UPDATED: Call our new API function
+        const fetchedProject = await getProjectById(projectId);
         setProject(fetchedProject);
       } catch (err: unknown) {
-        console.error("Failed to fetch stack by ID:", err);
-        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while loading stack details.";
+        console.error("Failed to fetch project by ID:", err);
+        const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred while loading project details.";
         setError(errorMessage);
-        toast.error("Error loading stack", {
+        toast.error("Error loading project", { // Updated toast message
           description: errorMessage,
           duration: 5000,
         });
@@ -75,36 +83,27 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     };
 
     fetchProjectData();
-  }, [projectId, router]); // Depend on projectId and router
+  }, [projectId, router]);
 
-  // --- Loading state ---
+  // --- Loading state for the entire layout ---
   if (isLoadingProject) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-muted-foreground">
+      <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p>Loading stack details...</p>
+        <p>Loading project details...</p>
       </div>
     );
   }
 
-  // --- Error state (only show if there's an error and not redirecting) ---
-  if (error && !isLoadingProject) { // Only show if loading is done but there's an error
+  // --- Error state (redirect on error is handled in useEffect) ---
+  if (error || !project) {
+    // If there's an error or no project, and we're not loading, show a fallback message
+    // (redirect has already been triggered by useEffect)
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-red-500">
-        <h1 className="text-xl font-bold mb-4">Error Loading Stack</h1>
-        <p className="text-lg">{error}</p>
-        <p className="text-muted-foreground mt-4">Redirecting to stack list...</p>
-      </div>
-    );
-  }
-
-  // Ensure project is available before rendering children
-  if (!project) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-10rem)] text-center text-red-500">
-        <h1 className="text-xl font-bold mb-4">Stack Not Found</h1>
-        <p className="text-lg">The requested stack could not be loaded.</p>
-        <p className="text-muted-foreground mt-4">Redirecting to stack list...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
+        <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
+        <p className="text-lg">{error || "The requested project could not be loaded or does not exist."}</p>
+        <p className="text-muted-foreground mt-4">You will be redirected shortly.</p>
       </div>
     );
   }
@@ -113,13 +112,31 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
   const contextValue: ProjectContextType = {
     projectId,
     project,
-    isLoadingProject,
-    error,
+    isLoadingProject: false,
+    error: null,
   };
 
   return (
     <ProjectContext.Provider value={contextValue}>
-      {children}
+      <SidebarProvider defaultOpen={true}> {/* Manages sidebar state */}
+        <div className="flex min-h-screen w-full"> {/* Main flex container for sidebar + content */}
+          {/* Main Sidebar */}
+          <UISidebar>
+            <SidebarComponent isCollapsed={useSidebar().state === "collapsed"} />
+          </UISidebar>
+
+          {/* Main Content Area with Topbar and children */}
+          <SidebarInset> {/* Automatically adjusts content based on sidebar */}
+            <TopbarComponent
+              toggleSidebar={useSidebar().toggleSidebar}
+              isSidebarCollapsed={useSidebar().state === "collapsed"}
+            />
+            <main className="flex-1 overflow-auto bg-background text-foreground">
+              {children}
+            </main>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
     </ProjectContext.Provider>
   );
 }
