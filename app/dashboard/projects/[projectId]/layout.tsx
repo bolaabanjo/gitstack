@@ -1,4 +1,3 @@
-// app/dashboard/projects/[projectId]/layout.tsx
 "use client";
 
 import React, {
@@ -13,20 +12,16 @@ import { getProjectById, Project } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-// Sidebar and context
 import {
   Sidebar as UISidebar,
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Custom components
 import SidebarComponent from "@/components/sidebar";
 import TopbarComponent from "@/components/topbar";
 
-// --- Types ---
 interface ProjectContextType {
   projectId: string | null;
   project: Project | null;
@@ -34,7 +29,6 @@ interface ProjectContextType {
   error: string | null;
 }
 
-// --- Context ---
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function useProject(): ProjectContextType {
@@ -45,7 +39,17 @@ export function useProject(): ProjectContextType {
   return context;
 }
 
-// --- Layout ---
+// Bridge component: safely uses useSidebar() under SidebarProvider
+function TopbarBridge() {
+  const sidebar = useSidebar();
+  return (
+    <TopbarComponent
+      toggleSidebar={sidebar.toggleSidebar}
+      isSidebarCollapsed={sidebar.state === "collapsed"}
+    />
+  );
+}
+
 export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
@@ -95,7 +99,6 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     fetchProjectData();
   }, [projectId, router]);
 
-  // --- Loading state ---
   if (isLoadingProject) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
@@ -105,23 +108,18 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // --- Error state ---
   if (error || !project) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
         <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
         <p className="text-lg">
-          {error ||
-            "The requested project could not be loaded or does not exist."}
+          {error || "The requested project could not be loaded or does not exist."}
         </p>
-        <p className="text-muted-foreground mt-4">
-          You will be redirected shortly.
-        </p>
+        <p className="text-muted-foreground mt-4">You will be redirected shortly.</p>
       </div>
     );
   }
 
-  // --- Context value ---
   const contextValue: ProjectContextType = {
     projectId,
     project,
@@ -129,22 +127,16 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     error: null,
   };
 
-  // --- Final Layout - Proper Sidebar Integration ---
   return (
     <ProjectContext.Provider value={contextValue}>
       <SidebarProvider defaultOpen={true}>
         <div className="flex min-h-screen w-full">
-          {/* Sidebar - Uses shadcn/ui Sidebar component */}
           <UISidebar collapsible="icon" variant="sidebar">
             <SidebarComponent />
           </UISidebar>
 
-          {/* Main content area */}
           <SidebarInset>
-            <TopbarComponent
-              toggleSidebar={useSidebar().toggleSidebar}
-              isSidebarCollapsed={useSidebar().state === "collapsed"}
-            />
+            <TopbarBridge />
             <main className="flex-1 overflow-auto bg-background text-foreground">
               {children}
             </main>
