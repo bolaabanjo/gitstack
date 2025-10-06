@@ -276,6 +276,22 @@ export async function completeCliAuthRequest(completionData: CliAuthCompletionDa
   return response.json();
 }
 
+export async function deleteProject(projectId: string): Promise<{ message: string; id: string }> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete project');
+  }
+
+  return response.json();
+}
+
 export async function getCliAuthRequestStatus(cliAuthToken: string): Promise<CliAuthStatus> {
   const response = await fetch(`${API_BASE_URL}/cli-auth/status?cliAuthToken=${cliAuthToken}`, {
     method: 'GET',
