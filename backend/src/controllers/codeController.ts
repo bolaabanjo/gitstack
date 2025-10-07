@@ -1,12 +1,234 @@
 // backend/src/controllers/codeController.ts
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
-import { supabaseService, SUPABASE_BUCKET_NAME } from '../services/supabase'; // NEW: Import Supabase client and bucket name
-import path from 'path'; // NEW: Import path module for mime type guessing
-import mime from 'mime-types'; // NEW: Import mime-types for better mime detection
+import { supabaseService, SUPABASE_BUCKET_NAME } from '../services/supabase';
+import path from 'path';
+import mime from 'mime-types';
+import crypto from 'crypto'; // NEW: Import crypto for hashing
 
 let pool: Pool;
 export const setDbPool = (dbPool: Pool) => { pool = dbPool; };
+
+// Helper: resolve head snapshot for branch, else latest snapshot
+async function resolveSnapshotId(client: any, projectId: string, branch?: string): Promise<string | null> {
+  if (branch) {
+    const br = await client.query(
+      `SELECT head_snapshot_id FROM branches WHERE project_id = $1 AND name = $2 LIMIT 1`,
+      [projectId, branch]
+    );
+    if (br.rows.length && br.rows[0].head_snapshot_id) return br.rows[0].head_snapshot_id;
+  }
+  const latest = await client.query(
+    `SELECT id FROM latest_project_snapshot WHERE project_id = $1 LIMIT 1`,
+    [projectId]
+  );
+  return latest.rows[0]?.id ?? null;
+}
+
+// Helper: Get files for a given snapshot
+async function getFilesInSnapshot(client: any, snapshotId: string): Promise<Array<{ path: string; hash: string; size: number; mode: number }>> {
+  const result = await client.query(
+    `SELECT path, hash, size, mode FROM snapshot_files WHERE snapshot_id = $1`,
+    [snapshotId]
+  );
+  return result.rows;
+}
+
+// Helper: Create a new snapshot
+async function createNewSnapshot(
+  client: any,
+  projectId: string,
+  userId: string,
+  files: Array<{ path: string; hash: string; size: number; mode: number }>,
+  title: string = 'Automated snapshot',
+  description?: string,
+  externalId?: string
+) {
+  const now = Date.now();
+  const fileCount = files.length;
+
+  const snapshotResult = await client.query(
+    `INSERT INTO snapshots (project_id, user_id, title, description, timestamp, file_count, external_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id`,
+    [projectId, userId, title, description, now, fileCount, externalId]
+  );
+  const newSnapshotId = snapshotResult.rows[0].id;
+
+  if (files.length > 0) {
+    const fileInsertPromises = files.map(file =>
+      client.query(
+        `INSERT INTO snapshot_files (snapshot_id, path, hash, size, mode)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [newSnapshotId, file.path, file.hash, file.size, file.mode]
+      )
+    );
+    await Promise.all(fileInsertPromises);
+  }
+  return newSnapshotId;
+}
+
+// Helper: Update branch head
+async function updateBranchHead(client: any, projectId: string, branch: string, newSnapshotId: string) {
+  const now = Date.now();
+  await client.query(
+    `UPDATE branches SET head_snapshot_id = $1, updated_at = $2 WHERE project_id = $3 AND name = $4`,
+    [newSnapshotId, now, projectId, branch]
+  );
+}
+
+// --- File/Folder Creation Endpoints ---
+
+export const createFile = async (req: Request, res: Response) => {
+  const { id: projectId } = req.params;
+  const { branch, path: filePath, content, userId } = req.body as {
+    branch: string;
+    path: string;
+    content: string; // Base64 encoded
+    userId: string;
+  };
+
+  if (!branch || !filePath || typeof content !== 'string' || !userId) {
+    return res.status(400).json({ error: 'Branch, path, content, and userId are required.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const currentSnapshotId = await resolveSnapshotId(client, projectId, branch);
+    let existingFiles: Array<{ path: string; hash: string; size: number; mode: number }> = [];
+    if (currentSnapshotId) {
+      existingFiles = await getFilesInSnapshot(client, currentSnapshotId);
+    }
+
+    // Hash the new file's content
+    const contentBuffer = Buffer.from(content, 'base64');
+    const fileHash = crypto.createHash('sha256').update(contentBuffer).digest('hex');
+    const fileSize = contentBuffer.byteLength;
+    const fileMode = 644; // Default file mode
+
+    // Check for existing file at path and remove it (effectively an overwrite/update)
+    const filteredFiles = existingFiles.filter(f => f.path !== filePath);
+
+    // Add the new file
+    const newFile = { path: filePath, hash: fileHash, size: fileSize, mode: fileMode };
+    const allFiles = [...filteredFiles, newFile];
+
+    // Upload content to Supabase
+    const filePathInStorage = `${projectId}/${newFile.hash}`; // Store by project/hash for deduplication
+    const { error: uploadError } = await supabaseService.storage
+      .from(SUPABASE_BUCKET_NAME)
+      .upload(filePathInStorage, contentBuffer, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: mime.lookup(filePath) || 'application/octet-stream',
+      });
+
+    if (uploadError) {
+      console.error(`Supabase upload error for file ${filePath}:`, uploadError.message);
+      throw new Error(`Failed to upload file content for ${filePath}`);
+    }
+
+    // Create new snapshot
+    const newSnapshotId = await createNewSnapshot(
+      client,
+      projectId,
+      userId,
+      allFiles,
+      `Create file: ${filePath}`
+    );
+
+    // Update branch head
+    await updateBranchHead(client, projectId, branch, newSnapshotId);
+
+    await client.query('COMMIT');
+    res.status(201).json({ snapshotId: newSnapshotId, newFile });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('createFile error', e);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+};
+
+export const createFolder = async (req: Request, res: Response) => {
+  const { id: projectId } = req.params;
+  const { branch, path: folderPath, userId } = req.body as {
+    branch: string;
+    path: string;
+    userId: string;
+  };
+
+  if (!branch || !folderPath || !userId) {
+    return res.status(400).json({ error: 'Branch, path, and userId are required.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const currentSnapshotId = await resolveSnapshotId(client, projectId, branch);
+    let existingFiles: Array<{ path: string; hash: string; size: number; mode: number }> = [];
+    if (currentSnapshotId) {
+      existingFiles = await getFilesInSnapshot(client, currentSnapshotId);
+    }
+
+    // Add a dummy .gitkeep file inside the new folder to make it visible
+    const gitkeepPath = path.join(folderPath, '.gitkeep');
+    const gitkeepContent = Buffer.from(''); // Empty content
+    const gitkeepHash = crypto.createHash('sha256').update(gitkeepContent).digest('hex');
+    const gitkeepSize = 0;
+    const gitkeepMode = 644;
+
+    // Check if gitkeepPath already exists and filter it out for overwrite
+    const filteredFiles = existingFiles.filter(f => f.path !== gitkeepPath);
+
+    const newGitkeepFile = { path: gitkeepPath, hash: gitkeepHash, size: gitkeepSize, mode: gitkeepMode };
+    const allFiles = [...filteredFiles, newGitkeepFile];
+
+    // Upload empty content for .gitkeep to Supabase (if it doesn't exist)
+    const filePathInStorage = `${projectId}/${newGitkeepFile.hash}`;
+    const { error: uploadError } = await supabaseService.storage
+      .from(SUPABASE_BUCKET_NAME)
+      .upload(filePathInStorage, gitkeepContent, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: 'text/plain',
+      });
+
+    if (uploadError) {
+      console.error(`Supabase upload error for .gitkeep in ${folderPath}:`, uploadError.message);
+      // Don't throw, as the folder can still be created logically in DB
+    }
+
+    // Create new snapshot
+    const newSnapshotId = await createNewSnapshot(
+      client,
+      projectId,
+      userId,
+      allFiles,
+      `Create folder: ${folderPath}`
+    );
+
+    // Update branch head
+    await updateBranchHead(client, projectId, branch, newSnapshotId);
+
+    await client.query('COMMIT');
+    res.status(201).json({ snapshotId: newSnapshotId, newFolder: { path: folderPath, type: 'dir' } });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('createFolder error', e);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+};
+
+
+// GET /api/projects/:id/branches, getTags, getTree, getBlob, getReadme, updateReadme, getContributors (existing functions)
+// ... (all your existing codeController.ts functions go here after the new ones) ...
 
 // GET /api/projects/:id/branches
 export const getBranches = async (req: Request, res: Response) => {
@@ -64,22 +286,6 @@ export const getTags = async (req: Request, res: Response) => {
   }
 };
 
-// Helper: resolve head snapshot for branch, else latest snapshot
-async function resolveSnapshotId(client: any, projectId: string, branch?: string): Promise<string | null> {
-  if (branch) {
-    const br = await client.query(
-      `SELECT head_snapshot_id FROM branches WHERE project_id = $1 AND name = $2 LIMIT 1`,
-      [projectId, branch]
-    );
-    if (br.rows.length && br.rows[0].head_snapshot_id) return br.rows[0].head_snapshot_id;
-  }
-  const latest = await client.query(
-    `SELECT id FROM latest_project_snapshot WHERE project_id = $1 LIMIT 1`,
-    [projectId]
-  );
-  return latest.rows[0]?.id ?? null;
-}
-
 // GET /api/projects/:id/tree?branch=main&path=
 export const getTree = async (req: Request, res: Response) => {
   const { id: projectId } = req.params;
@@ -130,7 +336,6 @@ export const getTree = async (req: Request, res: Response) => {
     client.release();
   }
 };
-
 
 // GET /api/projects/:id/blob?branch=main&path=...
 export const getBlob = async (req: Request, res: Response) => {

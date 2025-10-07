@@ -131,6 +131,19 @@ export interface FileData {
   mode?: number; // Optional
   content?: string; // NEW: Optional base64 encoded content for creation
 }
+// NEW: Types for File/Folder Operations
+export interface CreateFilePayload {
+  branch: string;
+  path: string; // Full path including filename
+  content: string; // Base64 encoded content
+  userId: string;
+}
+
+export interface CreateFolderPayload {
+  branch: string;
+  path: string; // Full path of the new folder
+  userId: string;
+}
 
 export interface CliAuthStatus {
   id?: string;
@@ -233,6 +246,31 @@ export async function getProjectsByOwner(ownerId: string): Promise<Project[]> {
   return response.json();
 }
 
+export async function createFile(projectId: string, payload: CreateFilePayload): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/files`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create file');
+  }
+  return response.json();
+}
+
+export async function createFolder(projectId: string, payload: CreateFolderPayload): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/folders`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to create folder');
+  }
+  return response.json();
+}
 export async function getProjectById(projectId: string): Promise<Project> {
   const response = await fetch(`${API_BASE_URL}/projects/${projectId}`, {
     method: 'GET',
