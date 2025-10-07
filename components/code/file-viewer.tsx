@@ -1,3 +1,4 @@
+// components/code/file-viewer.tsx
 "use client";
 
 import React, { useMemo } from "react";
@@ -50,7 +51,6 @@ function toDisplaySize(size?: number) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
-// UPDATED: makeImageSrc now expects base64 content
 function makeImageSrc(base64Content: string | null, mimeType: string | null) {
   if (!base64Content || !mimeType) return null;
   return `data:${mimeType};base64,${base64Content}`;
@@ -63,23 +63,26 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
   const fileName = useMemo(() => getFileName(blob?.path), [blob?.path]);
   const ext = useMemo(() => getExtension(blob?.path), [blob?.path]);
 
+  // NEW: Move decodedContent to the top level, always called.
+  // It conditionally decodes based on the content itself, not on outer rendering logic.
+  const decodedContent = useMemo(() => {
+    // Only attempt to decode if blob.content exists and is determined to be textual.
+    // Images will be handled by makeImageSrc, which expects base64.
+    if (blob?.content && isTextual(blob.mime, blob.path) && !isImage(blob.mime, blob.path)) {
+      try {
+        return Buffer.from(blob.content, 'base64').toString('utf-8');
+      } catch (e) {
+        console.error("Failed to decode base64 content:", e);
+        return blob.content; // Fallback to raw if decoding fails
+      }
+    }
+    return blob?.content; // Return original content (possibly base64 for images, or null)
+  }, [blob?.content, blob?.mime, blob?.path]);
+
+
   if (!blob) return null;
 
   const { path, hash, size, mime, content, message } = blob;
-
-  // NEW: Decode base64 content only once if it's text for markdown/code blocks
-  const decodedContent = useMemo(() => {
-    if (content && isTextual(mime, path) && !isImage(mime, path)) { // Only decode if it's textual and not an image that needs direct src
-      try {
-        return Buffer.from(content, 'base64').toString('utf-8');
-      } catch (e) {
-        console.error("Failed to decode base64 content:", e);
-        return content; // Fallback to raw if decoding fails
-      }
-    }
-    return content; // Keep as is if not textual or no content
-  }, [content, mime, path]);
-
 
   const Header = (
     <CardHeader className="pb-2">
@@ -100,8 +103,8 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
     </CardHeader>
   );
 
-  // If content is explicitly null (not just an empty string) or message exists, show placeholder
-  if (content == null || (content === "" && message)) { // Modified condition for empty content with message
+  // If content is explicitly null or message exists (indicating content issue)
+  if (content == null || (content === "" && message)) {
     return (
       <Card>
         {Header}
@@ -123,7 +126,7 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
   }
 
   if (isImage(mime, path)) {
-    // makeImageSrc now expects base64 content
+    // makeImageSrc still expects base64 content
     const src = makeImageSrc(content, mime);
     return (
       <Card>
