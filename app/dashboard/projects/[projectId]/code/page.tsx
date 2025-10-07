@@ -9,7 +9,8 @@ import {
   getReadmeApi,
   getProjectById,
   deleteProject,
-  createOrGetUser, // NEW: Import createOrGetUser
+  deleteFile, // NEW: Import deleteFile
+  deleteFolder, // NEW: Import deleteFolder
   type Branch,
   type Tag,
   type TreeEntry,
@@ -37,33 +38,19 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog";
-import { useUser } from "@clerk/nextjs"; // NEW: Import useUser
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
   const [branch, setBranch] = useState<string>("main");
   const [path, setPath] = useState<string>("");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false); // Renamed for clarity
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  // NEW: State for file/folder deletion
+  const [showDeleteFileDialog, setShowDeleteFileDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ path: string; type: "file" | "folder" } | null>(null);
 
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { user, isLoaded: isClerkLoaded } = useUser(); // NEW: Get Clerk user info
-
-  // Fetch PostgreSQL user ID
-  const { data: pgUser, isLoading: isLoadingPgUser } = useQuery({
-    queryKey: ["pgUser", user?.id],
-    enabled: isClerkLoaded && !!user?.id, // Only run if Clerk user is loaded
-    queryFn: async () => {
-      if (!user) throw new Error("Clerk user not available.");
-      const primaryEmail = user.emailAddresses?.[0]?.emailAddress ?? "";
-      return await createOrGetUser({
-        clerkUserId: user.id,
-        email: primaryEmail,
-        name: user.fullName ?? undefined,
-      });
-    },
-  });
 
   const { data: project, isLoading: isLoadingProject } = useQuery<Project, Error>({
     queryKey: ["project", projectId],
@@ -97,12 +84,45 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
       toast.error("Failed to delete project", { description: error.message });
     },
     onSettled: () => {
-      setShowDeleteDialog(false);
+      setShowDeleteProjectDialog(false);
+    },
+  });
+
+  // NEW: Mutations for file/folder deletion
+  const deleteFileMutation = useMutation({
+    mutationFn: deleteFile,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, path] });
+      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+      toast.success("File deleted", { description: "The file has been successfully removed." });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to delete file", { description: error.message });
+    },
+    onSettled: () => {
+      setShowDeleteFileDialog(false);
+      setItemToDelete(null);
+    },
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: deleteFolder,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, path] });
+      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+      toast.success("Folder deleted", { description: "The folder and its contents have been successfully removed." });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to delete folder", { description: error.message });
+    },
+    onSettled: () => {
+      setShowDeleteFileDialog(false);
+      setItemToDelete(null);
     },
   });
 
   const handleDeleteProject = () => {
-    setShowDeleteDialog(true);
+    setShowDeleteProjectDialog(true);
   };
 
   const confirmDeleteProject = () => {
@@ -110,32 +130,56 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
   };
 
   const handleNewFile = () => {
-    if (!pgUser?.userId) {
-      toast.error("User not loaded", { description: "PostgreSQL user ID is not available. Please try again." });
-      return;
-    }
     setShowNewFileDialog(true);
   };
 
   const handleNewFolder = () => {
-    if (!pgUser?.userId) {
-      toast.error("User not loaded", { description: "PostgreSQL user ID is not available. Please try again." });
-      return;
-    }
     setShowNewFileDialog(true);
   };
 
+  // NEW: Handlers for file/folder deletion (from FileTree)
+  const handleDeleteFile = (filePath: string) => {
+    setItemToDelete({ path: filePath, type: "file" });
+    setShowDeleteFileDialog(true);
+  };
+
+  const handleDeleteFolder = (folderPath: string) => {
+    setItemToDelete({ path: folderPath, type: "folder" });
+    setShowDeleteFileDialog(true);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!itemToDelete || !project?.ownerId) {
+      toast.error("Error", { description: "Invalid item to delete or owner ID missing." });
+      return;
+    }
+
+    if (itemToDelete.type === "file") {
+      await deleteFileMutation.mutateAsync({
+        projectId,
+        branch,
+        path: itemToDelete.path,
+        userId: project.ownerId, // Use project owner as userId for deletion
+      });
+    } else { // type === "folder"
+      await deleteFolderMutation.mutateAsync({
+        projectId,
+        branch,
+        path: itemToDelete.path,
+        userId: project.ownerId, // Use project owner as userId for deletion
+      });
+    }
+  };
+
+
   useEffect(() => {
-    // Only redirect if Clerk user is loaded AND project is explicitly not found
-    if (isClerkLoaded && !isLoadingProject && !project) {
+    if (!isLoadingProject && !project) {
       router.replace("/dashboard/projects");
       toast.error("Project not found", { description: "The project you tried to access does not exist or has been deleted." });
     }
-  }, [isClerkLoaded, isLoadingProject, project, router]);
+  }, [isLoadingProject, project, router]);
 
-
-  // Show skeletons while main project data or pgUser is loading
-  if (isLoadingProject || isLoadingPgUser) { // NEW: Include isLoadingPgUser in loading state
+  if (isLoadingProject) {
     return (
       <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
         <Skeleton className="h-20 w-full" />
@@ -148,9 +192,11 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     );
   }
 
-  if (!project || !pgUser?.userId) { // NEW: Also check for pgUser.userId before rendering
-    return null; // The useEffect will handle redirection if project is null
+  if (!project) {
+    return null;
   }
+
+  const isDeleting = deleteFileMutation.isPending || deleteFolderMutation.isPending;
 
   return (
     <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
@@ -172,7 +218,17 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-full">
           <CardContent className="p-3">
-            {treeLoading ? <Skeleton className="h-64 w-full" /> : <FileTree entries={tree || []} path={path} onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)} />}
+            {treeLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <FileTree
+                entries={tree || []}
+                path={path}
+                onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)}
+                onDeleteFile={handleDeleteFile}    // NEW: Pass delete file handler
+                onDeleteFolder={handleDeleteFolder} // NEW: Pass delete folder handler
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -188,8 +244,8 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* Delete Project Confirmation Dialog */}
+      <AlertDialog open={showDeleteProjectDialog} onOpenChange={setShowDeleteProjectDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -211,15 +267,39 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* NEW: New File/Folder Creation Dialog */}
+      {/* New File/Folder Creation Dialog */}
       <NewFileFolderDialog
         isOpen={showNewFileDialog}
         onClose={() => setShowNewFileDialog(false)}
         projectId={projectId}
         branch={branch}
         currentPath={path}
-        pgUserId={pgUser.userId} // NEW: Pass the PostgreSQL UUID here!
       />
+
+      {/* NEW: Delete File/Folder Confirmation Dialog */}
+      <AlertDialog open={showDeleteFileDialog} onOpenChange={setShowDeleteFileDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the{" "}
+              <span className="font-semibold">{itemToDelete?.type}</span> &quot;
+              <span className="font-mono">{itemToDelete?.path}</span>&quot; from the current branch.
+              This will create a new snapshot reflecting the deletion.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteItem}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : `Delete ${itemToDelete?.type === "file" ? "File" : "Folder"}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

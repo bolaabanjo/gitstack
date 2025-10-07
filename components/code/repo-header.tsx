@@ -12,13 +12,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ArrowDownToLine,
-  ExternalLink,
   MoreVertical,
   Trash2,
-  Settings,
   PlusCircle,
   FileText,
   Folder,
+  Wrench,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 
@@ -121,7 +120,7 @@ export function RepoHeader({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
+              <Wrench className="mr-2 h-4 w-4" />
               Project Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />

@@ -145,6 +145,51 @@ export interface CreateFolderPayload {
   userId: string;
 }
 
+// lib/api.ts
+// ... existing types and API functions ...
+
+// NEW: Types for File/Folder Deletion
+export interface DeleteFilePayload {
+  branch: string;
+  path: string; // Full path including filename
+  userId: string;
+}
+
+export interface DeleteFolderPayload {
+  branch: string;
+  path: string; // Full path of the folder to delete
+  userId: string;
+}
+
+// ... existing Code page API functions ...
+
+// NEW: File/Folder Deletion API
+export async function deleteFile(projectId: string, payload: DeleteFilePayload): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/files`, {
+    method: 'DELETE', // Use DELETE method for deletion
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete file');
+  }
+  return response.json();
+}
+
+export async function deleteFolder(projectId: string, payload: DeleteFolderPayload): Promise<Snapshot> {
+  const response = await fetch(`${API_BASE_URL}/projects/${projectId}/folders`, {
+    method: 'DELETE', // Use DELETE method for deletion
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to delete folder');
+  }
+  return response.json();
+}
+
 export interface CliAuthStatus {
   id?: string;
   cli_auth_token: string;

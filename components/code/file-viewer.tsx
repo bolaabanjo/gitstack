@@ -9,6 +9,15 @@ import { type BlobResponse } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { codeSurface, codeBorder } from "@/components/code/code-theme";
+import { Button } from "@/components/ui/button"; // NEW: Import Button
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"; // NEW: Import DropdownMenu components
+import { MoreVertical, Trash2 } from "lucide-react"; // NEW: Import MoreVertical, Trash2
 
 // Helper functions (keep as is, but review for context)
 function getFileName(path?: string) {
@@ -59,30 +68,30 @@ function languageFromExt(ext: string) {
   return ext || "text";
 }
 
-export function FileViewer({ blob }: { blob?: BlobResponse }) {
+interface FileViewerProps {
+  blob?: BlobResponse;
+  onDeleteFile: (filePath: string) => void; // NEW: Callback for deleting file
+}
+
+export function FileViewer({ blob, onDeleteFile }: FileViewerProps) {
   const fileName = useMemo(() => getFileName(blob?.path), [blob?.path]);
   const ext = useMemo(() => getExtension(blob?.path), [blob?.path]);
-
-  // NEW: Move decodedContent to the top level, always called.
-  // It conditionally decodes based on the content itself, not on outer rendering logic.
-  const decodedContent = useMemo(() => {
-    // Only attempt to decode if blob.content exists and is determined to be textual.
-    // Images will be handled by makeImageSrc, which expects base64.
-    if (blob?.content && isTextual(blob.mime, blob.path) && !isImage(blob.mime, blob.path)) {
-      try {
-        return Buffer.from(blob.content, 'base64').toString('utf-8');
-      } catch (e) {
-        console.error("Failed to decode base64 content:", e);
-        return blob.content; // Fallback to raw if decoding fails
-      }
-    }
-    return blob?.content; // Return original content (possibly base64 for images, or null)
-  }, [blob?.content, blob?.mime, blob?.path]);
-
 
   if (!blob) return null;
 
   const { path, hash, size, mime, content, message } = blob;
+
+  const decodedContent = useMemo(() => {
+    if (content && isTextual(mime, path) && !isImage(mime, path)) {
+      try {
+        return Buffer.from(content, 'base64').toString('utf-8');
+      } catch (e) {
+        console.error("Failed to decode base64 content:", e);
+        return content;
+      }
+    }
+    return content;
+  }, [content, mime, path]);
 
   const Header = (
     <CardHeader className="pb-2">
@@ -98,12 +107,29 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
         <div className="flex items-center gap-2">
           {path ? <CopyButton text={path} /> : null}
           {hash ? <CopyButton text={hash} /> : null}
+          {/* NEW: Dropdown for file actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* Add more actions here if needed later (e.g., Rename, Download) */}
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDeleteFile(path)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete File
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </CardHeader>
   );
 
-  // If content is explicitly null or message exists (indicating content issue)
   if (content == null || (content === "" && message)) {
     return (
       <Card>
@@ -126,7 +152,6 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
   }
 
   if (isImage(mime, path)) {
-    // makeImageSrc still expects base64 content
     const src = makeImageSrc(content, mime);
     return (
       <Card>
@@ -148,7 +173,6 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
       <Card>
         {Header}
         <CardContent className="p-6 prose prose-invert max-w-none">
-          {/* Use decodedContent for markdown rendering */}
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{decodedContent ?? ""}</ReactMarkdown>
         </CardContent>
       </Card>
@@ -162,7 +186,7 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
         {Header}
         <CardContent className="p-0">
           <CodeBlock
-            code={decodedContent ?? ""} // Use decodedContent for code blocks
+            code={decodedContent ?? ""}
             language={language}
             showLineNumbers
             wrap={false}
@@ -173,7 +197,6 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
     );
   }
 
-  // Fallback generic viewer
   return (
     <Card>
       {Header}
