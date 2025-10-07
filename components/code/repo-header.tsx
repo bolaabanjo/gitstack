@@ -109,11 +109,6 @@ export function RepoHeader({
           Clone
         </Button>
 
-        <Button variant="outline" size="sm">
-          <ExternalLink className="mr-2 h-4 w-4" />
-          Open in CLI
-        </Button>
-
         <Button variant="default" size="sm">
           Deploy
         </Button>
