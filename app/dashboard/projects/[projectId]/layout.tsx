@@ -145,7 +145,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
 
           {/* Mobile Sidebar as a Sheet/Drawer */}
           {/* This is a visual sidebar for mobile, which will be toggled by the topbar */}
-          <UISidebar className="md:hidden">
+          <UISidebar collapsible="none" variant="sidebar" className="md:hidden">
             <SidebarComponent />
           </UISidebar>
 
