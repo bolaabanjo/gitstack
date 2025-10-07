@@ -1,3 +1,4 @@
+// app/dashboard/projects/[projectId]/layout.tsx
 "use client";
 
 import React, {
@@ -12,16 +13,20 @@ import { getProjectById, Project } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+// Sidebar and context
 import {
   Sidebar as UISidebar,
   SidebarProvider,
   SidebarInset,
-  useSidebar,
+  SidebarTrigger,
+  useSidebar, // Import useSidebar hook
 } from "@/components/ui/sidebar";
 
+// Custom components
 import SidebarComponent from "@/components/sidebar";
 import TopbarComponent from "@/components/topbar";
 
+// --- Types ---
 interface ProjectContextType {
   projectId: string | null;
   project: Project | null;
@@ -29,6 +34,7 @@ interface ProjectContextType {
   error: string | null;
 }
 
+// --- Context ---
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function useProject(): ProjectContextType {
@@ -39,17 +45,7 @@ export function useProject(): ProjectContextType {
   return context;
 }
 
-// Bridge component: safely uses useSidebar() under SidebarProvider
-function TopbarBridge() {
-  const sidebar = useSidebar();
-  return (
-    <TopbarComponent
-      toggleSidebar={sidebar.toggleSidebar}
-      isSidebarCollapsed={sidebar.state === "collapsed"}
-    />
-  );
-}
-
+// --- Layout ---
 export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
@@ -99,6 +95,7 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     fetchProjectData();
   }, [projectId, router]);
 
+  // --- Loading state ---
   if (isLoadingProject) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
@@ -108,18 +105,23 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // --- Error state ---
   if (error || !project) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
         <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
         <p className="text-lg">
-          {error || "The requested project could not be loaded or does not exist."}
+          {error ||
+            "The requested project could not be loaded or does not exist."}
         </p>
-        <p className="text-muted-foreground mt-4">You will be redirected shortly.</p>
+        <p className="text-muted-foreground mt-4">
+          You will be redirected shortly.
+        </p>
       </div>
     );
   }
 
+  // --- Context value ---
   const contextValue: ProjectContextType = {
     projectId,
     project,
@@ -127,16 +129,31 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     error: null,
   };
 
+  // --- Final Layout - Proper Sidebar Integration ---
   return (
     <ProjectContext.Provider value={contextValue}>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider defaultOpen={true}> {/* defaultOpen true for desktop */}
         <div className="flex min-h-screen w-full">
-          <UISidebar collapsible="icon" variant="sidebar">
+          {/* Sidebar - Uses shadcn/ui Sidebar component */}
+          {/* Responsive behavior: Always present in DOM, but visually hidden/collapsed on smaller screens */}
+          <UISidebar collapsible="icon" variant="sidebar" className="max-md:hidden"> {/* Hide sidebar on mobile */}
             <SidebarComponent />
           </UISidebar>
 
+          {/* Mobile Sidebar as a Sheet/Drawer */}
+          {/* This is a visual sidebar for mobile, which will be toggled by the topbar */}
+          <UISidebar collapsible="icon" variant="sidebar" className="md:hidden">
+            <SidebarComponent />
+          </UISidebar>
+
+          {/* Main content area */}
           <SidebarInset>
-            <TopbarBridge />
+            <TopbarComponent
+              // The Topbar needs access to toggle the mobile sidebar state
+              toggleSidebar={useSidebar().toggleSidebar}
+              isSidebarCollapsed={useSidebar().state === "collapsed"}
+              // NEW: Pass the mobile specific sidebar state if needed, though useSidebar() handles it
+            />
             <main className="flex-1 overflow-auto bg-background text-foreground">
               {children}
             </main>
