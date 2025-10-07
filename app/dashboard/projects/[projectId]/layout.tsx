@@ -127,22 +127,32 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     error: null,
   };
 
-  return (
-    <ProjectContext.Provider value={contextValue}>
-      <SidebarProvider defaultOpen={true}>
-        <div className="flex min-h-screen w-full">
-          <UISidebar collapsible="icon" variant="sidebar">
-            <SidebarComponent />
-          </UISidebar>
+ // --- Final Layout - Proper Sidebar Integration ---
+ return (
+  <ProjectContext.Provider value={contextValue}>
+    <SidebarProvider defaultOpen={true}> {/* defaultOpen true for desktop */}
+      <div className="flex min-h-screen w-full">
+        {/* Sidebar - Uses shadcn/ui Sidebar component */}
+        {/* Responsive behavior: Always present in DOM, but visually hidden/collapsed on smaller screens */}
+        <UISidebar collapsible="icon" variant="sidebar" className="max-md:hidden"> {/* Hide sidebar on mobile */}
+          <SidebarComponent />
+        </UISidebar>
 
-          <SidebarInset>
-            <TopbarBridge />
-            <main className="flex-1 overflow-auto bg-background text-foreground">
-              {children}
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
-    </ProjectContext.Provider>
-  );
+
+        {/* Main content area */}
+        <SidebarInset>
+          <TopbarComponent
+            // The Topbar needs access to toggle the mobile sidebar state
+            toggleSidebar={useSidebar().toggleSidebar}
+            isSidebarCollapsed={useSidebar().state === "collapsed"}
+            // NEW: Pass the mobile specific sidebar state if needed, though useSidebar() handles it
+          />
+          <main className="flex-1 overflow-auto bg-background text-foreground">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  </ProjectContext.Provider>
+);
 }
