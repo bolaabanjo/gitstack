@@ -76,8 +76,8 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
       </div>
 
       {/* Middle Section: Search Bar (Responsive) */}
-      <div className="flex-1 max-w-sm mx-4 rounded-full">
-        <div className="relative">
+      <div className="flex-1 max-w-sm mx-4">
+        <div className="relative rounded-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
