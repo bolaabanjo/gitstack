@@ -81,7 +81,11 @@ export default function CodeDeepPage({ params }: { params: { projectId: string; 
 
   return (
     <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
-      <RepoHeader project={project} contributors={undefined} onDeleteProject={handleNoOpDeleteProject} />
+      <RepoHeader project={project} contributors={undefined} onDeleteProject={handleNoOpDeleteProject} onNewFile={function (): void {
+        throw new Error("Function not implemented.");
+      } } onNewFolder={function (): void {
+        throw new Error("Function not implemented.");
+      } } />
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <BranchPicker branches={branches || []} value={branch} onChange={undefined} />

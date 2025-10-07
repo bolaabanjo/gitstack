@@ -14,7 +14,7 @@ import {
   type TreeEntry,
   type Project,
 } from "@/lib/api";
-import { useState, useEffect } from "react"; // Removed useMemo as it was unused
+import { useState, useEffect } from "react";
 import { RepoHeader } from "@/components/code/repo-header";
 import { BranchPicker } from "@/components/code/branch-picker";
 import { TagList } from "@/components/code/tag-list";
@@ -35,17 +35,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog"; // NEW: Import the dialog component
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
   const [branch, setBranch] = useState<string>("main");
   const [path, setPath] = useState<string>("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false); // NEW: State for new file/folder dialog
 
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  // All hooks must be called unconditionally at the top level
   const { data: project, isLoading: isLoadingProject } = useQuery<Project, Error>({
     queryKey: ["project", projectId],
     queryFn: () => getProjectById(projectId),
@@ -67,8 +68,6 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     queryFn: () => getReadmeApi(projectId, branch),
   });
 
-  // Removed unused contributorsQuery
-
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
@@ -84,7 +83,7 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     },
   });
 
-  const handleDeleteProject = () => { // Removed 'id' parameter as projectId is already in scope
+  const handleDeleteProject = () => {
     setShowDeleteDialog(true);
   };
 
@@ -92,7 +91,16 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     deleteProjectMutation.mutate(projectId);
   };
 
-  // This useEffect now runs unconditionally to handle redirection logic
+  const handleNewFile = () => {
+    setShowNewFileDialog(true);
+  };
+
+  const handleNewFolder = () => {
+    setShowNewFileDialog(true);
+    // Optionally, pre-select 'folder' type in the dialog if you want to differentiate
+    // For now, the dialog defaults to 'file' but allows switching.
+  };
+
   useEffect(() => {
     if (!isLoadingProject && !project) {
       router.replace("/dashboard/projects");
@@ -114,12 +122,18 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
   }
 
   if (!project) {
-    return null; // Will be handled by the useEffect redirect
+    return null;
   }
 
   return (
     <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
-      <RepoHeader project={project} contributors={undefined} onDeleteProject={handleDeleteProject} />
+      <RepoHeader
+        project={project}
+        contributors={undefined}
+        onDeleteProject={handleDeleteProject}
+        onNewFile={handleNewFile}      // NEW: Pass new file handler
+        onNewFolder={handleNewFolder}  // NEW: Pass new folder handler
+      />
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <BranchPicker branches={branches || []} value={branch} onChange={setBranch} />
@@ -131,7 +145,7 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <Card className="h-full">
           <CardContent className="p-3">
-            {treeLoading ? <Skeleton className="h-64 w-full" /> : <FileTree entries={tree || []} path={path} onOpen={(p) => setPath(p)} />}
+            {treeLoading ? <Skeleton className="h-64 w-full" /> : <FileTree entries={tree || []} path={path} onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)} />}
           </CardContent>
         </Card>
 
@@ -169,6 +183,15 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* NEW: New File/Folder Creation Dialog */}
+      <NewFileFolderDialog
+        isOpen={showNewFileDialog}
+        onClose={() => setShowNewFileDialog(false)}
+        projectId={projectId}
+        branch={branch}
+        currentPath={path}
+      />
     </div>
   );
 }

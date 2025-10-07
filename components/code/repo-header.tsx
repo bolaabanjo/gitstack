@@ -18,6 +18,9 @@ import {
   MoreVertical,
   Trash2,
   Settings,
+  PlusCircle, // NEW: Import PlusCircle for "New" button
+  FileText,    // NEW: For new file icon
+  Folder,      // NEW: For new folder icon
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 
@@ -25,15 +28,16 @@ interface RepoHeaderProps {
   project?: Project;
   contributors?: Contributor[];
   onDeleteProject: (projectId: string) => void;
+  onNewFile: () => void;    // NEW: Callback for new file
+  onNewFolder: () => void;  // NEW: Callback for new folder
 }
 
-export function RepoHeader({ project, contributors, onDeleteProject }: RepoHeaderProps) {
+export function RepoHeader({ project, contributors, onDeleteProject, onNewFile, onNewFolder }: RepoHeaderProps) {
   const { user } = useUser();
 
   if (!project) return null;
   const visibility = project.visibility === "public" ? "Public" : "Private";
 
-  // Use the actual user's profile image if available from Clerk
   const userAvatarUrl = user?.imageUrl || "/sdark.png";
 
   return (
@@ -73,6 +77,24 @@ export function RepoHeader({ project, contributors, onDeleteProject }: RepoHeade
         </div>
       </div>
       <div className="flex items-center space-x-2">
+        {/* NEW: New File/Folder Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="default" size="sm" className="gap-2">
+              <PlusCircle className="h-4 w-4" />
+              New
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onNewFile}>
+              <FileText className="mr-2 h-4 w-4" /> New File
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onNewFolder}>
+              <Folder className="mr-2 h-4 w-4" /> New Folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button variant="outline" size="sm">
           <ArrowDownToLine className="mr-2 h-4 w-4" />
           Clone
