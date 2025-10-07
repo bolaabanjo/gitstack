@@ -10,7 +10,7 @@ import { ModeToggle } from '@/components/mode-toggle';
 
 import {
   Search,
-  Menu, // Import Menu icon
+  PanelsTopLeft, // Import Menu icon
 } from 'lucide-react';
 
 interface TopbarProps {
@@ -45,7 +45,7 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
           className="md:hidden" // Only show on mobile screens
           aria-label="Toggle Sidebar"
         >
-          <Menu className="h-5 w-5" />
+          <PanelsTopLeft className="h-5 w-5" />
         </Button>
 
         {/* Desktop sidebar toggle (already existed, ensure it hides on mobile if needed) */}
@@ -56,7 +56,7 @@ export default function Topbar({ toggleSidebar, isSidebarCollapsed }: TopbarProp
           className="hidden md:flex" // Only show on desktop screens
           aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          <Menu className="h-5 w-5" />
+          <PanelsTopLeft className="h-5 w-5" />
         </Button>
 
         <nav aria-label="breadcrumb" className="flex items-center space-x-2 text-sm text-muted-foreground">
