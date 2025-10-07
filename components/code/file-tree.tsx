@@ -1,66 +1,94 @@
-// components/code/file-tree.tsx
 "use client";
 
 import { TreeEntry } from "@/lib/api";
-import { Folder, File, MoreVertical, Trash2 } from "lucide-react"; // NEW: Import MoreVertical, Trash2
+import { Folder, File, MoreVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button"; // NEW: Import Button
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"; // NEW: Import DropdownMenu components
+} from "@/components/ui/dropdown-menu";
 
 interface FileTreeProps {
-  entries: TreeEntry[];
-  path: string; // The current directory path being displayed
+  entries?: TreeEntry[]; // make it optional to avoid crashes before data loads
+  path: string;
   onOpen?: (p: string) => void;
-  onDeleteFile?: (filePath: string) => void;   // NEW: Callback for deleting a file
-  onDeleteFolder?: (folderPath: string) => void; // NEW: Callback for deleting a folder
+  onDeleteFile?: (filePath: string) => void;
+  onDeleteFolder?: (folderPath: string) => void;
 }
 
-export function FileTree({ entries, path, onOpen, onDeleteFile, onDeleteFolder }: FileTreeProps) {
+export function FileTree({
+  entries = [],
+  path,
+  onOpen,
+  onDeleteFile,
+  onDeleteFolder,
+}: FileTreeProps) {
   const getItemFullPath = (itemName: string) =>
     path ? `${path}/${itemName}` : itemName;
 
+  if (entries.length === 0) {
+    return (
+      <div className="text-muted-foreground text-center py-4 text-sm">
+        No files or folders here.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-1 text-sm">
-      {entries.length === 0 && (
-        <div className="text-muted-foreground text-center py-4">No files or folders here.</div>
-      )}
       {entries.map((e) => {
         const isDir = e.type === "dir";
         const fullPath = getItemFullPath(e.name);
 
         return (
-          <div key={fullPath} className="group flex items-center justify-between rounded-md transition-colors hover:bg-accent">
+          <div
+            key={fullPath}
+            className="group flex items-center justify-between rounded-md transition-colors hover:bg-accent"
+          >
+            {/* Clickable row */}
             <button
-              className={cn("flex w-full items-center gap-2 px-2 py-1 text-left")}
+              type="button"
+              className={cn(
+                "flex w-full items-center gap-2 px-2 py-1 text-left focus:outline-none focus:ring-2 focus:ring-ring rounded-md"
+              )}
               onClick={() => onOpen?.(fullPath)}
             >
-              {isDir ? <Folder className="h-4 w-4 text-primary" /> : <File className="h-4 w-4 text-muted-foreground" />}
+              {isDir ? (
+                <Folder className="h-4 w-4 text-primary shrink-0" />
+              ) : (
+                <File className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
               <span className="truncate">{e.name}</span>
             </button>
+
+            {/* Action menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity"
+                  aria-label="Open file actions"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent align="end">
-                {/* Add more actions here if needed later (e.g., Rename, Download) */}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={(event) => {
-                    event.stopPropagation(); // Prevent onOpen from firing
-                    if (isDir && onDeleteFolder) onDeleteFolder(fullPath);
-                    if (!isDir && onDeleteFile) onDeleteFile(fullPath);
+                    event.stopPropagation();
+                    const confirmed = confirm(
+                      `Are you sure you want to delete the ${isDir ? "folder" : "file"} "${e.name}"?`
+                    );
+                    if (!confirmed) return;
+
+                    if (isDir) onDeleteFolder?.(fullPath);
+                    else onDeleteFile?.(fullPath);
                   }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
