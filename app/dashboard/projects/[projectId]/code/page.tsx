@@ -9,6 +9,7 @@ import {
   getReadmeApi,
   getProjectById,
   deleteProject,
+  createOrGetUser, // NEW: Import createOrGetUser
   type Branch,
   type Tag,
   type TreeEntry,
@@ -36,6 +37,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog";
+import { useUser } from "@clerk/nextjs"; // NEW: Import useUser
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
@@ -46,6 +48,22 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
 
   const queryClient = useQueryClient();
   const router = useRouter();
+  const { user, isLoaded: isClerkLoaded } = useUser(); // NEW: Get Clerk user info
+
+  // Fetch PostgreSQL user ID
+  const { data: pgUser, isLoading: isLoadingPgUser } = useQuery({
+    queryKey: ["pgUser", user?.id],
+    enabled: isClerkLoaded && !!user?.id, // Only run if Clerk user is loaded
+    queryFn: async () => {
+      if (!user) throw new Error("Clerk user not available.");
+      const primaryEmail = user.emailAddresses?.[0]?.emailAddress ?? "";
+      return await createOrGetUser({
+        clerkUserId: user.id,
+        email: primaryEmail,
+        name: user.fullName ?? undefined,
+      });
+    },
+  });
 
   const { data: project, isLoading: isLoadingProject } = useQuery<Project, Error>({
     queryKey: ["project", projectId],
@@ -83,24 +101,46 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     },
   });
 
-  const handleDeleteProject = () => setShowDeleteDialog(true);
-  const confirmDeleteProject = () => deleteProjectMutation.mutate(projectId);
-  const handleNewFile = () => setShowNewFileDialog(true);
-  const handleNewFolder = () => setShowNewFileDialog(true);
+  const handleDeleteProject = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteProject = () => {
+    deleteProjectMutation.mutate(projectId);
+  };
+
+  const handleNewFile = () => {
+    if (!pgUser?.userId) {
+      toast.error("User not loaded", { description: "PostgreSQL user ID is not available. Please try again." });
+      return;
+    }
+    setShowNewFileDialog(true);
+  };
+
+  const handleNewFolder = () => {
+    if (!pgUser?.userId) {
+      toast.error("User not loaded", { description: "PostgreSQL user ID is not available. Please try again." });
+      return;
+    }
+    setShowNewFileDialog(true);
+  };
 
   useEffect(() => {
-    if (!isLoadingProject && !project) {
+    // Only redirect if Clerk user is loaded AND project is explicitly not found
+    if (isClerkLoaded && !isLoadingProject && !project) {
       router.replace("/dashboard/projects");
       toast.error("Project not found", { description: "The project you tried to access does not exist or has been deleted." });
     }
-  }, [isLoadingProject, project, router]);
+  }, [isClerkLoaded, isLoadingProject, project, router]);
 
-  if (isLoadingProject) {
+
+  // Show skeletons while main project data or pgUser is loading
+  if (isLoadingProject || isLoadingPgUser) { // NEW: Include isLoadingPgUser in loading state
     return (
-      <div className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 space-y-6">
+      <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-10 w-full" />
-        <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
@@ -108,10 +148,12 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     );
   }
 
-  if (!project) return null;
+  if (!project || !pgUser?.userId) { // NEW: Also check for pgUser.userId before rendering
+    return null; // The useEffect will handle redirection if project is null
+  }
 
   return (
-    <div className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 space-y-6">
+    <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
       <RepoHeader
         project={project}
         contributors={undefined}
@@ -119,31 +161,22 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         onNewFile={handleNewFile}
         onNewFolder={handleNewFolder}
       />
-
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
           <BranchPicker branches={branches || []} value={branch} onChange={setBranch} />
           <TagList tags={tags || []} />
         </div>
         <PathBreadcrumbs baseHref={`/dashboard/projects/${projectId}/code`} path={path} onChangePath={setPath} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-        <Card className="h-full min-h-[200px]">
-          <CardContent className="p-3 sm:p-4">
-            {treeLoading ? (
-              <Skeleton className="h-64 w-full" />
-            ) : (
-              <FileTree
-                entries={tree || []}
-                path={path}
-                onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)}
-              />
-            )}
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <Card className="h-full">
+          <CardContent className="p-3">
+            {treeLoading ? <Skeleton className="h-64 w-full" /> : <FileTree entries={tree || []} path={path} onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)} />}
           </CardContent>
         </Card>
 
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-6">
           <Readme projectId={projectId} branch={branch} content={readme?.content ?? ""} />
           {!readme?.content && (
             <Card>
@@ -155,13 +188,14 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </div>
       </div>
 
+      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete your project
-              &quot;{project.name}&quot; and all its associated data.
+              &quot;{project.name}&quot; and all its associated data (snapshots, branches, etc.).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -177,12 +211,14 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* NEW: New File/Folder Creation Dialog */}
       <NewFileFolderDialog
         isOpen={showNewFileDialog}
         onClose={() => setShowNewFileDialog(false)}
         projectId={projectId}
         branch={branch}
         currentPath={path}
+        pgUserId={pgUser.userId} // NEW: Pass the PostgreSQL UUID here!
       />
     </div>
   );

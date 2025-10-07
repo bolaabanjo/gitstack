@@ -1,3 +1,4 @@
+// app/dashboard/projects/[projectId]/layout.tsx
 "use client";
 
 import React, {
@@ -12,16 +13,20 @@ import { getProjectById, Project } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+// Sidebar and context
 import {
   Sidebar as UISidebar,
   SidebarProvider,
   SidebarInset,
-  useSidebar,
+  SidebarTrigger,
+  useSidebar, // Import useSidebar hook
 } from "@/components/ui/sidebar";
 
+// Custom components
 import SidebarComponent from "@/components/sidebar";
 import TopbarComponent from "@/components/topbar";
 
+// --- Types ---
 interface ProjectContextType {
   projectId: string | null;
   project: Project | null;
@@ -29,6 +34,7 @@ interface ProjectContextType {
   error: string | null;
 }
 
+// --- Context ---
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 export function useProject(): ProjectContextType {
@@ -39,17 +45,7 @@ export function useProject(): ProjectContextType {
   return context;
 }
 
-// Bridge so we can use sidebar state in topbar
-function TopbarBridge() {
-  const sidebar = useSidebar();
-  return (
-    <TopbarComponent
-      toggleSidebar={sidebar.toggleSidebar}
-      isSidebarCollapsed={sidebar.state === "collapsed"}
-    />
-  );
-}
-
+// --- Layout ---
 export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
@@ -99,50 +95,68 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     fetchProjectData();
   }, [projectId, router]);
 
+  // --- Loading state ---
+  if (isLoadingProject) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin mb-4" />
+        <p>Loading project details...</p>
+      </div>
+    );
+  }
+
+  // --- Error state ---
+  if (error || !project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
+        <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
+        <p className="text-lg">
+          {error ||
+            "The requested project could not be loaded or does not exist."}
+        </p>
+        <p className="text-muted-foreground mt-4">
+          You will be redirected shortly.
+        </p>
+      </div>
+    );
+  }
+
+  // --- Context value ---
   const contextValue: ProjectContextType = {
     projectId,
     project,
-    isLoadingProject,
-    error,
+    isLoadingProject: false,
+    error: null,
   };
 
+  // --- Final Layout - Proper Sidebar Integration ---
   return (
     <ProjectContext.Provider value={contextValue}>
-      <SidebarProvider defaultOpen={true}>
-        <div className="flex min-h-screen w-full bg-background">
-          <UISidebar
-            collapsible="icon"
-            variant="sidebar"
-            className="hidden md:flex"
-          >
+      <SidebarProvider defaultOpen={true}> {/* defaultOpen true for desktop */}
+        <div className="flex min-h-screen w-full">
+          {/* Sidebar - Uses shadcn/ui Sidebar component */}
+          {/* Responsive behavior: Always present in DOM, but visually hidden/collapsed on smaller screens */}
+          <UISidebar collapsible="icon" variant="sidebar" className="max-md:hidden"> {/* Hide sidebar on mobile */}
             <SidebarComponent />
           </UISidebar>
 
-          <SidebarInset className="flex-1 flex flex-col">
-            <TopbarBridge />
+          {/* Mobile Sidebar as a Sheet/Drawer */}
+          {/* This is a visual sidebar for mobile, which will be toggled by the topbar */}
+          <UISidebar collapsible="always" variant="mobile" className="md:hidden" placement="left">
+            <SidebarComponent />
+          </UISidebar>
 
-            <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
-              {isLoadingProject ? (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-muted-foreground">
-                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
-                  <p>Loading project details...</p>
-                </div>
-              ) : error || !project ? (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-red-500">
-                  <h1 className="text-xl font-bold mb-4">
-                    Error or Project Not Found
-                  </h1>
-                  <p className="text-lg">
-                    {error ||
-                      "The requested project could not be loaded or does not exist."}
-                  </p>
-                  <p className="text-muted-foreground mt-4">
-                    You will be redirected shortly.
-                  </p>
-                </div>
-              ) : (
-                children
-              )}
+
+          {/* Main content area */}
+          <SidebarInset>
+            <TopbarComponent
+              // The Topbar needs access to toggle the mobile sidebar state
+              toggleSidebar={useSidebar().toggleSidebar}
+              isSidebarCollapsed={useSidebar().state === "collapsed"}
+              // NEW: Pass the mobile specific sidebar state if needed, though useSidebar() handles it
+            />
+            <main className="flex-1 overflow-auto bg-background text-foreground">
+              {children}
             </main>
           </SidebarInset>
         </div>

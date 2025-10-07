@@ -1,7 +1,7 @@
 // components/code/new-file-folder-dialog.tsx
 "use client";
 
-import { useRef } from "react"; // useRef is used for the form
+import { useState, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,11 +15,11 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { File, Folder, Loader2 } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+// Removed useUser import as pgUserId is now passed as a prop
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFile, createFolder } from "@/lib/api";
+import { createFile, createFolder, Snapshot } from "@/lib/api";
 import { toast } from "sonner";
-// Removed 'cn' as it was unused in this specific component
+import { cn } from "@/lib/utils";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -37,8 +37,7 @@ import {
 // --- Zod Schemas for Validation ---
 const baseSchema = z.object({
   name: z.string().min(1, { message: "Name cannot be empty." }).max(100, { message: "Name too long." }),
-  // CORRECTED: Pass required_error directly to the z.string() or z.enum() if it's meant to apply to the type
-  type: z.enum(["file", "folder"], { message: "Please select a type." }), // Fixed Zod enum usage
+  type: z.enum(["file", "folder"], { message: "Please select a type." }),
 });
 
 const fileSchema = baseSchema.extend({
@@ -60,71 +59,85 @@ interface NewFileFolderDialogProps {
   projectId: string;
   branch: string;
   currentPath: string; // The path where the new item will be created (e.g., "src/components")
+  pgUserId: string;     // NEW: Pass the PostgreSQL UUID here
 }
 
 export function NewFileFolderDialog({
-    isOpen,
-    onClose,
-    projectId, // Keep projectId here for context in the component
-    branch,
-    currentPath,
-  }: NewFileFolderDialogProps) {
-    const { user } = useUser();
-    const queryClient = useQueryClient();
-    const form = useForm<FormValues>({
-      resolver: zodResolver(formSchema),
-      defaultValues: {
-        name: "",
-        type: "file",
-      },
-    });
+  isOpen,
+  onClose,
+  projectId,
+  branch,
+  currentPath,
+  pgUserId, // NEW: Accept pgUserId as a prop
+}: NewFileFolderDialogProps) {
+  // Removed useUser hook
+  const queryClient = useQueryClient();
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      type: "file",
+    },
+  });
 
-    const createFileMutation = useMutation({
-        mutationFn: async (payload: { // NEW: Define payload type for mutate
-          projectId: string;
-          branch: string;
-          path: string;
-          content: string;
-          userId: string;
-        }) => createFile(payload.projectId, payload), // NEW: Destructure and pass correctly
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
-          queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
-          toast.success("File created successfully!", { description: "The new file has been added to your project." });
-          onClose();
-        },
-        onError: (error: Error) => {
-          toast.error("Failed to create file", { description: error.message });
-        },
-      });
-    
+  const selectedType = form.watch("type");
 
-      const createFolderMutation = useMutation({
-        mutationFn: async (payload: { // NEW: Define payload type for mutate
-          projectId: string;
-          branch: string;
-          path: string;
-          userId: string;
-        }) => createFolder(payload.projectId, payload), // NEW: Destructure and pass correctly
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
-          queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
-          toast.success("Folder created successfully!", { description: "The new folder has been added to your project." });
-          onClose();
-        },
-        onError: (error: Error) => {
-          toast.error("Failed to create folder", { description: error.message });
-        },
-      });
+  const createFileMutation = useMutation({
+    mutationFn: ({
+      projectId,
+      branch,
+      path,
+      content,
+      userId,
+    }: {
+      projectId: string;
+      branch: string;
+      path: string;
+      content: string;
+      userId: string;
+    }) => createFile(projectId, { branch, path, content, userId }) as Promise<Snapshot>,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
+      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+      toast.success("File created successfully!", { description: "The new file has been added to your project." });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to create file", { description: error.message });
+    },
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: ({
+      projectId,
+      branch,
+      path,
+      userId,
+    }: {
+      projectId: string;
+      branch: string;
+      path: string;
+      userId: string;
+    }) => createFolder(projectId, { branch, path, userId }) as Promise<Snapshot>,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
+      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+      toast.success("Folder created successfully!", { description: "The new folder has been added to your project." });
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to create folder", { description: error.message });
+    },
+  });
 
   async function onSubmit(values: FormValues) {
-    if (!user?.id) {
-      toast.error("Authentication required.", { description: "You must be logged in to create files or folders." });
+    if (!pgUserId) { // Use pgUserId prop
+      toast.error("User not loaded", { description: "PostgreSQL user ID is not available. Please try again." });
       return;
     }
 
     const fullPath = currentPath ? `${currentPath}/${values.name}` : values.name;
-    const userId = user.id;
+    // const userId = user.id; // Removed, now using pgUserId prop
 
     if (values.type === "file") {
       const contentBase64 = Buffer.from(values.content || "", 'utf-8').toString('base64');
@@ -133,20 +146,19 @@ export function NewFileFolderDialog({
         branch,
         path: fullPath,
         content: contentBase64,
-        userId,
+        userId: pgUserId, // Use pgUserId prop
       });
     } else { // type === "folder"
-        await createFolderMutation.mutateAsync({
-          projectId, // Pass projectId explicitly
-          branch,
-          path: fullPath,
-          userId,
-        });
-      }
+      await createFolderMutation.mutateAsync({
+        projectId,
+        branch,
+        path: fullPath,
+        userId: pgUserId, // Use pgUserId prop
+      });
+    }
   }
 
   const isPending = createFileMutation.isPending || createFolderMutation.isPending;
-  const selectedType = form.watch("type");
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
