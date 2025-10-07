@@ -1,7 +1,7 @@
 // components/code/new-file-folder-dialog.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef } from "react"; // useRef is used for the form
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,8 @@ import { useUser } from "@clerk/nextjs";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFile, createFolder } from "@/lib/api";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import * as z from "zod"; // For validation
+// Removed 'cn' as it was unused in this specific component
+import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -37,7 +37,8 @@ import {
 // --- Zod Schemas for Validation ---
 const baseSchema = z.object({
   name: z.string().min(1, { message: "Name cannot be empty." }).max(100, { message: "Name too long." }),
-  type: z.enum(["file", "folder"], { required_error: "Please select a type." }),
+  // CORRECTED: Pass required_error directly to the z.string() or z.enum() if it's meant to apply to the type
+  type: z.enum(["file", "folder"], { message: "Please select a type." }), // Fixed Zod enum usage
 });
 
 const fileSchema = baseSchema.extend({
@@ -62,50 +63,59 @@ interface NewFileFolderDialogProps {
 }
 
 export function NewFileFolderDialog({
-  isOpen,
-  onClose,
-  projectId,
-  branch,
-  currentPath,
-}: NewFileFolderDialogProps) {
-  const { user } = useUser();
-  const queryClient = useQueryClient();
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      type: "file",
-      // content is only for files, so not in default for base
-    },
-  });
+    isOpen,
+    onClose,
+    projectId, // Keep projectId here for context in the component
+    branch,
+    currentPath,
+  }: NewFileFolderDialogProps) {
+    const { user } = useUser();
+    const queryClient = useQueryClient();
+    const form = useForm<FormValues>({
+      resolver: zodResolver(formSchema),
+      defaultValues: {
+        name: "",
+        type: "file",
+      },
+    });
 
-  const selectedType = form.watch("type");
+    const createFileMutation = useMutation({
+        mutationFn: async (payload: { // NEW: Define payload type for mutate
+          projectId: string;
+          branch: string;
+          path: string;
+          content: string;
+          userId: string;
+        }) => createFile(payload.projectId, payload), // NEW: Destructure and pass correctly
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
+          queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+          toast.success("File created successfully!", { description: "The new file has been added to your project." });
+          onClose();
+        },
+        onError: (error: Error) => {
+          toast.error("Failed to create file", { description: error.message });
+        },
+      });
+    
 
-  const createFileMutation = useMutation({
-    mutationFn: createFile,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
-      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] }); // Invalidate snapshots too
-      toast.success("File created successfully!", { description: "The new file has been added to your project." });
-      onClose();
-    },
-    onError: (error: Error) => {
-      toast.error("Failed to create file", { description: error.message });
-    },
-  });
-
-  const createFolderMutation = useMutation({
-    mutationFn: createFolder,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
-      queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] }); // Invalidate snapshots too
-      toast.success("Folder created successfully!", { description: "The new folder has been added to your project." });
-      onClose();
-    },
-    onError: (error: Error) => {
-      toast.error("Failed to create folder", { description: error.message });
-    },
-  });
+      const createFolderMutation = useMutation({
+        mutationFn: async (payload: { // NEW: Define payload type for mutate
+          projectId: string;
+          branch: string;
+          path: string;
+          userId: string;
+        }) => createFolder(payload.projectId, payload), // NEW: Destructure and pass correctly
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, currentPath] });
+          queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
+          toast.success("Folder created successfully!", { description: "The new folder has been added to your project." });
+          onClose();
+        },
+        onError: (error: Error) => {
+          toast.error("Failed to create folder", { description: error.message });
+        },
+      });
 
   async function onSubmit(values: FormValues) {
     if (!user?.id) {
@@ -126,16 +136,17 @@ export function NewFileFolderDialog({
         userId,
       });
     } else { // type === "folder"
-      await createFolderMutation.mutateAsync({
-        projectId,
-        branch,
-        path: fullPath,
-        userId,
-      });
-    }
+        await createFolderMutation.mutateAsync({
+          projectId, // Pass projectId explicitly
+          branch,
+          path: fullPath,
+          userId,
+        });
+      }
   }
 
   const isPending = createFileMutation.isPending || createFolderMutation.isPending;
+  const selectedType = form.watch("type");
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
