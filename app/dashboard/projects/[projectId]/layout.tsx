@@ -39,7 +39,7 @@ export function useProject(): ProjectContextType {
   return context;
 }
 
-// Bridge component: safely uses useSidebar() under SidebarProvider
+// Bridge so we can use sidebar state in topbar
 function TopbarBridge() {
   const sidebar = useSidebar();
   return (
@@ -99,60 +99,54 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
     fetchProjectData();
   }, [projectId, router]);
 
-  if (isLoadingProject) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center text-muted-foreground">
-        <Loader2 className="h-8 w-8 animate-spin mb-4" />
-        <p>Loading project details...</p>
-      </div>
-    );
-  }
-
-  if (error || !project) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center text-red-500">
-        <h1 className="text-xl font-bold mb-4">Error or Project Not Found</h1>
-        <p className="text-lg">
-          {error || "The requested project could not be loaded or does not exist."}
-        </p>
-        <p className="text-muted-foreground mt-4">You will be redirected shortly.</p>
-      </div>
-    );
-  }
-
   const contextValue: ProjectContextType = {
     projectId,
     project,
-    isLoadingProject: false,
-    error: null,
+    isLoadingProject,
+    error,
   };
 
- // --- Final Layout - Proper Sidebar Integration ---
- return (
-  <ProjectContext.Provider value={contextValue}>
-    <SidebarProvider defaultOpen={true}> {/* defaultOpen true for desktop */}
-      <div className="flex min-h-screen w-full">
-        {/* Sidebar - Uses shadcn/ui Sidebar component */}
-        {/* Responsive behavior: Always present in DOM, but visually hidden/collapsed on smaller screens */}
-        <UISidebar collapsible="icon" variant="sidebar" className="max-md:hidden"> {/* Hide sidebar on mobile */}
-          <SidebarComponent />
-        </UISidebar>
+  return (
+    <ProjectContext.Provider value={contextValue}>
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex min-h-screen w-full bg-background">
+          <UISidebar
+            collapsible="icon"
+            variant="sidebar"
+            className="hidden md:flex"
+          >
+            <SidebarComponent />
+          </UISidebar>
 
+          <SidebarInset className="flex-1 flex flex-col">
+            <TopbarBridge />
 
-        {/* Main content area */}
-        <SidebarInset>
-          <TopbarComponent
-            // The Topbar needs access to toggle the mobile sidebar state
-            toggleSidebar={useSidebar().toggleSidebar}
-            isSidebarCollapsed={useSidebar().state === "collapsed"}
-            // NEW: Pass the mobile specific sidebar state if needed, though useSidebar() handles it
-          />
-          <main className="flex-1 overflow-auto bg-background text-foreground">
-            {children}
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
-  </ProjectContext.Provider>
-);
+            <main className="flex-1 overflow-auto p-4 sm:p-6 md:p-8">
+              {isLoadingProject ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  <p>Loading project details...</p>
+                </div>
+              ) : error || !project ? (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-red-500">
+                  <h1 className="text-xl font-bold mb-4">
+                    Error or Project Not Found
+                  </h1>
+                  <p className="text-lg">
+                    {error ||
+                      "The requested project could not be loaded or does not exist."}
+                  </p>
+                  <p className="text-muted-foreground mt-4">
+                    You will be redirected shortly.
+                  </p>
+                </div>
+              ) : (
+                children
+              )}
+            </main>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    </ProjectContext.Provider>
+  );
 }
