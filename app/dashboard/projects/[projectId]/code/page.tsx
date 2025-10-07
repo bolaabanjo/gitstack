@@ -35,14 +35,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog"; // NEW: Import the dialog component
+import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog";
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
   const [branch, setBranch] = useState<string>("main");
   const [path, setPath] = useState<string>("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showNewFileDialog, setShowNewFileDialog] = useState(false); // NEW: State for new file/folder dialog
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
 
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -83,23 +83,10 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     },
   });
 
-  const handleDeleteProject = () => {
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDeleteProject = () => {
-    deleteProjectMutation.mutate(projectId);
-  };
-
-  const handleNewFile = () => {
-    setShowNewFileDialog(true);
-  };
-
-  const handleNewFolder = () => {
-    setShowNewFileDialog(true);
-    // Optionally, pre-select 'folder' type in the dialog if you want to differentiate
-    // For now, the dialog defaults to 'file' but allows switching.
-  };
+  const handleDeleteProject = () => setShowDeleteDialog(true);
+  const confirmDeleteProject = () => deleteProjectMutation.mutate(projectId);
+  const handleNewFile = () => setShowNewFileDialog(true);
+  const handleNewFolder = () => setShowNewFileDialog(true);
 
   useEffect(() => {
     if (!isLoadingProject && !project) {
@@ -110,10 +97,10 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
 
   if (isLoadingProject) {
     return (
-      <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
+      <div className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 space-y-6">
         <Skeleton className="h-20 w-full" />
         <Skeleton className="h-10 w-full" />
-        <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <div className="grid gap-6 md:grid-cols-[280px_1fr]">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
@@ -121,35 +108,42 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     );
   }
 
-  if (!project) {
-    return null;
-  }
+  if (!project) return null;
 
   return (
-    <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
+    <div className="flex-1 p-4 sm:p-6 md:p-8 lg:p-12 space-y-6">
       <RepoHeader
         project={project}
         contributors={undefined}
         onDeleteProject={handleDeleteProject}
-        onNewFile={handleNewFile}      // NEW: Pass new file handler
-        onNewFolder={handleNewFolder}  // NEW: Pass new folder handler
+        onNewFile={handleNewFile}
+        onNewFolder={handleNewFolder}
       />
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
+
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 flex-wrap">
           <BranchPicker branches={branches || []} value={branch} onChange={setBranch} />
           <TagList tags={tags || []} />
         </div>
         <PathBreadcrumbs baseHref={`/dashboard/projects/${projectId}/code`} path={path} onChangePath={setPath} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <Card className="h-full">
-          <CardContent className="p-3">
-            {treeLoading ? <Skeleton className="h-64 w-full" /> : <FileTree entries={tree || []} path={path} onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)} />}
+      <div className="grid gap-6 md:grid-cols-[280px_1fr]">
+        <Card className="h-full min-h-[200px]">
+          <CardContent className="p-3 sm:p-4">
+            {treeLoading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : (
+              <FileTree
+                entries={tree || []}
+                path={path}
+                onOpen={(p) => router.push(`/dashboard/projects/${projectId}/code/${p}`)}
+              />
+            )}
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           <Readme projectId={projectId} branch={branch} content={readme?.content ?? ""} />
           {!readme?.content && (
             <Card>
@@ -161,14 +155,13 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete your project
-              &quot;{project.name}&quot; and all its associated data (snapshots, branches, etc.).
+              &quot;{project.name}&quot; and all its associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -184,7 +177,6 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* NEW: New File/Folder Creation Dialog */}
       <NewFileFolderDialog
         isOpen={showNewFileDialog}
         onClose={() => setShowNewFileDialog(false)}
