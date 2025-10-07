@@ -1,6 +1,9 @@
 // backend/src/controllers/codeController.ts
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
+import { supabaseService, SUPABASE_BUCKET_NAME } from '../services/supabase'; // NEW: Import Supabase client and bucket name
+import path from 'path'; // NEW: Import path module for mime type guessing
+import mime from 'mime-types'; // NEW: Import mime-types for better mime detection
 
 let pool: Pool;
 export const setDbPool = (dbPool: Pool) => { pool = dbPool; };
@@ -128,32 +131,64 @@ export const getTree = async (req: Request, res: Response) => {
   }
 };
 
+
 // GET /api/projects/:id/blob?branch=main&path=...
-// Note: no file contents in DB yet; respond with metadata placeholder
 export const getBlob = async (req: Request, res: Response) => {
   const { id: projectId } = req.params;
-  const { branch, path = '' } = req.query as { branch?: string; path?: string };
+  const { branch, path: filePath = '' } = req.query as { branch?: string; path?: string };
   const client = await pool.connect();
+  let fileContent: string | null = null;
+  let fileMime: string | null = null;
+  let message: string | undefined = undefined;
+
   try {
     const snapshotId = await resolveSnapshotId(client, projectId, branch);
-    if (!snapshotId) return res.status(404).json({ error: 'No snapshot for this branch/project' });
+    if (!snapshotId) {
+      return res.status(404).json({ error: 'No snapshot for this branch/project', content: null, mime: null });
+    }
 
-    const file = await client.query(
+    const fileMetadata = await client.query(
       `SELECT path, hash, size, mode FROM snapshot_files WHERE snapshot_id = $1 AND path = $2 LIMIT 1`,
-      [snapshotId, path]
+      [snapshotId, filePath]
     );
-    if (!file.rows.length) return res.status(404).json({ error: 'File not found' });
 
-    // Placeholder: content storage not yet implemented
+    if (!fileMetadata.rows.length) {
+      return res.status(404).json({ error: 'File not found', content: null, mime: null });
+    }
+
+    const file = fileMetadata.rows[0];
+    const filePathInStorage = `${projectId}/${snapshotId}/${file.hash}`;
+
+    // Guess MIME type
+    fileMime = mime.lookup(filePath) || 'application/octet-stream';
+
+    // Attempt to download content from Supabase Storage
+    const { data, error: downloadError } = await supabaseService.storage
+      .from(SUPABASE_BUCKET_NAME)
+      .download(filePathInStorage);
+
+    if (downloadError) {
+      console.warn(`Supabase download error for ${filePathInStorage}:`, downloadError.message);
+      message = `Could not download file content: ${downloadError.message}`;
+    } else if (data) {
+      // Convert Blob to base64 string
+      const buffer = await data.arrayBuffer();
+      fileContent = Buffer.from(buffer).toString('base64');
+      message = undefined; // Clear any warning messages if content is found
+    } else {
+      message = 'File content not found in storage.';
+    }
+
     return res.status(200).json({
-      path: file.rows[0].path,
-      hash: file.rows[0].hash,
-      size: file.rows[0].size,
-      mode: file.rows[0].mode,
-      content: null,
-      mime: null,
-      message: 'File content not stored. Configure file storage to enable preview.',
+      path: file.path,
+      hash: file.hash,
+      size: file.size,
+      mode: file.mode,
+      content: fileContent, // This will be base64 string or null
+      mime: fileMime,
+      message: message, // Include message if any warnings/errors occurred during download
     });
+
   } catch (e) {
     console.error('getBlob error', e);
     return res.status(500).json({ error: 'Internal server error' });

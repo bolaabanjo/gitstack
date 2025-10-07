@@ -124,6 +124,14 @@ export interface CliAuthCompletionData {
   clerkSessionToken: string;
 }
 
+export interface FileData {
+  path: string;
+  hash: string;
+  size?: number; // Optional
+  mode?: number; // Optional
+  content?: string; // NEW: Optional base64 encoded content for creation
+}
+
 export interface CliAuthStatus {
   id?: string;
   cli_auth_token: string;
