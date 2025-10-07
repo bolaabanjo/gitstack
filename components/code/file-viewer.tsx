@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { codeSurface, codeBorder } from "@/components/code/code-theme";
 
+// Helper functions (keep as is, but review for context)
 function getFileName(path?: string) {
   if (!path) return "";
   const parts = path.split("/");
@@ -49,11 +50,10 @@ function toDisplaySize(size?: number) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
-function makeImageSrc(content: string | null, mime: string | null) {
-  if (!content) return null;
-  if (content.startsWith("data:")) return content;
-  if (mime) return `data:${mime};base64,${content}`;
-  return `data:application/octet-stream;base64,${content}`;
+// UPDATED: makeImageSrc now expects base64 content
+function makeImageSrc(base64Content: string | null, mimeType: string | null) {
+  if (!base64Content || !mimeType) return null;
+  return `data:${mimeType};base64,${base64Content}`;
 }
 function languageFromExt(ext: string) {
   return ext || "text";
@@ -66,6 +66,20 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
   if (!blob) return null;
 
   const { path, hash, size, mime, content, message } = blob;
+
+  // NEW: Decode base64 content only once if it's text for markdown/code blocks
+  const decodedContent = useMemo(() => {
+    if (content && isTextual(mime, path) && !isImage(mime, path)) { // Only decode if it's textual and not an image that needs direct src
+      try {
+        return Buffer.from(content, 'base64').toString('utf-8');
+      } catch (e) {
+        console.error("Failed to decode base64 content:", e);
+        return content; // Fallback to raw if decoding fails
+      }
+    }
+    return content; // Keep as is if not textual or no content
+  }, [content, mime, path]);
+
 
   const Header = (
     <CardHeader className="pb-2">
@@ -86,7 +100,8 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
     </CardHeader>
   );
 
-  if (content == null) {
+  // If content is explicitly null (not just an empty string) or message exists, show placeholder
+  if (content == null || (content === "" && message)) { // Modified condition for empty content with message
     return (
       <Card>
         {Header}
@@ -108,6 +123,7 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
   }
 
   if (isImage(mime, path)) {
+    // makeImageSrc now expects base64 content
     const src = makeImageSrc(content, mime);
     return (
       <Card>
@@ -129,7 +145,8 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
       <Card>
         {Header}
         <CardContent className="p-6 prose prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          {/* Use decodedContent for markdown rendering */}
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{decodedContent ?? ""}</ReactMarkdown>
         </CardContent>
       </Card>
     );
@@ -142,7 +159,7 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
         {Header}
         <CardContent className="p-0">
           <CodeBlock
-            code={content}
+            code={decodedContent ?? ""} // Use decodedContent for code blocks
             language={language}
             showLineNumbers
             wrap={false}
@@ -153,6 +170,7 @@ export function FileViewer({ blob }: { blob?: BlobResponse }) {
     );
   }
 
+  // Fallback generic viewer
   return (
     <Card>
       {Header}
