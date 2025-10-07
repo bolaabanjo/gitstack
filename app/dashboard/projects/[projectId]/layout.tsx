@@ -49,6 +49,7 @@ export function useProject(): ProjectContextType {
 export default function ProjectLayout({ children }: { children: ReactNode }) {
   const params = useParams();
   const router = useRouter();
+  const { toggleSidebar, state } = useSidebar(); // Call useSidebar unconditionally
 
   const projectId =
     typeof params?.projectId === "string" ? params.projectId : null;
@@ -150,8 +151,8 @@ export default function ProjectLayout({ children }: { children: ReactNode }) {
           <SidebarInset>
             <TopbarComponent
               // The Topbar needs access to toggle the mobile sidebar state
-              toggleSidebar={useSidebar().toggleSidebar}
-              isSidebarCollapsed={useSidebar().state === "collapsed"}
+              toggleSidebar={toggleSidebar}
+              isSidebarCollapsed={state === "collapsed"}
               // NEW: Pass the mobile specific sidebar state if needed, though useSidebar() handles it
             />
             <main className="flex-1 overflow-auto bg-background text-foreground">
