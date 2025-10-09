@@ -43,6 +43,8 @@ import { useUser } from "@clerk/nextjs";
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
+  const { user } = useUser();
+  const pgUserId = user?.publicMetadata?.pgUserId;
   const [branch, setBranch] = useState<string>("main");
   const [path, setPath] = useState<string>("");
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false); // Renamed for clarity
@@ -192,8 +194,6 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
     );
   }
   
-  const { user } = useUser();
-  const pgUserId = user?.publicMetadata?.pgUserId;
 
   if (!project) {
     return null;
