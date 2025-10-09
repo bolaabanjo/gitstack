@@ -85,7 +85,7 @@ export function FileViewer({ blob, onDeleteFile }: FileViewerProps) {
 
   const decodedContent = useMemo(() => {
     const path = blob?.path;
-    const mime = blob?.mime;
+    const mime = blob?.mime ?? null;
     const content = blob?.content;
 
     if (content && isTextual(mime, path) && !isImage(mime, path)) {
@@ -102,7 +102,7 @@ export function FileViewer({ blob, onDeleteFile }: FileViewerProps) {
   // If no blob is provided, render nothing
   if (!blob) return null;
 
-  const { path, hash, size, mime, message } = blob;
+  const { path, hash, size, mime, message, content } = blob;
 
   // ---------- Header ----------
   const Header = (
