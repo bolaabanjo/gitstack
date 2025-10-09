@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"; // Import useQueryClient
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import ProjectListTopbar from "@/components/project-list-topbar";
 import {
   createOrGetUser,
   getProjectsByOwner,
-  deleteProject, // Import deleteProject
+  deleteProject,
   type Project,
 } from "@/lib/api";
 import { motion } from "framer-motion";
@@ -24,16 +24,16 @@ import {
   ArrowRight,
   Plus,
   FolderKey,
-  MoreHorizontal, // Import MoreHorizontal for dropdown
-  Trash2, // Import Trash2 for delete action
+  MoreHorizontal,
+  Trash2,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator, // Import Separator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
@@ -44,9 +44,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Import Alert Dialog components
-import { toast } from "sonner"; // Import toast for notifications
-import { useState } from "react"; // Import useState
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useState } from "react";
 
 // Enhanced skeleton loader with shimmer effect
 function ProjectCardSkeleton() {
@@ -73,97 +73,100 @@ function ProjectCardSkeleton() {
 // Enhanced project card with animations and delete option
 function ProjectCard({ project, index, onDelete }: { project: Project; index: number; onDelete: (projectId: string, projectName: string) => void }) {
   const isPublic = project.visibility === "public";
-  const lastUpdated = project.updated_at
-    ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })
-    : "Recently";
+
+  // Robustly parse and format updated_at
+  const lastUpdatedValue = typeof project.updated_at === 'string' ? parseInt(project.updated_at, 10) : project.updated_at;
+  const lastUpdated =
+    lastUpdatedValue && !isNaN(lastUpdatedValue)
+      ? formatDistanceToNow(new Date(lastUpdatedValue), { addSuffix: true })
+      : "N/A"; // Changed "Recently" to "N/A" for clarity if invalid
+
+  // Robustly parse and format created_at (if you decide to display it in ProjectCard)
+  const createdAtValue = typeof project.created_at === 'string' ? parseInt(project.created_at, 10) : project.created_at;
+  const createdAtFormatted =
+    createdAtValue && !isNaN(createdAtValue)
+      ? format(new Date(createdAtValue), 'PP')
+      : 'N/A';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.1 }}
-      whileHover={{ y: -4 }}
-      className="group relative"
-    >
-      <div className="relative overflow-hidden rounded-sm border bg-black p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+    <div className="relative overflow-hidden rounded-sm border bg-black p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+      {/* Gradient overlay on hover */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-        <div className="relative space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <Link href={`/dashboard/projects/${project.id}/code`} className="block">
-                <h3 className="text-lg font-semibold tracking-tight group-hover:text-primary transition-colors">
-                  {project.name}
-                </h3>
-              </Link>
-              <p className="text-xs text-muted-foreground mt-1">
-                Updated {lastUpdated}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={isPublic ? "default" : "secondary"}
-                className="flex items-center gap-1 capitalize"
-              >
-                {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                {project.visibility}
-              </Badge>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <Link href={`/dashboard/projects/${project.id}/settings`}>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Project Settings
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={() => onDelete(project.id, project.name)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Project
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          {/* Description */}
-          <p className="line-clamp-2 text-sm text-muted-foreground min-h-[2.5rem]">
-            {project.description || "No description provided."}
-          </p>
-
-          {/* Stats */}
-          <div className="flex items-center gap-4 pt-2 border-t">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Camera className="h-3.5 w-3.5" />
-              <span className="font-medium">{project.stats_snapshots ?? 0}</span>
-              <span>snapshots</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Rocket className="h-3.5 w-3.5" />
-              <span className="font-medium">{project.stats_deployments ?? 0}</span>
-              <span>deploys</span>
-            </div>
-          </div>
-
-          {/* Arrow indicator */}
-          <div className="flex items-center justify-end">
-            <Link href={`/dashboard/projects/${project.id}/code`}>
-              <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+      <div className="relative space-y-4">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <Link href={`/dashboard/projects/${project.id}/code`} className="block">
+              <h3 className="text-lg font-semibold tracking-tight group-hover:text-primary transition-colors">
+                {project.name}
+              </h3>
             </Link>
+            <p className="text-xs text-muted-foreground mt-1">
+              Updated {lastUpdated}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant={isPublic ? "default" : "secondary"}
+              className="flex items-center gap-1 capitalize"
+            >
+              {isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+              {project.visibility}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <Link href={`/dashboard/projects/${project.id}/settings`}>
+                  <DropdownMenuItem>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Project Settings
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => onDelete(project.id, project.name)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        {/* Description */}
+        <p className="line-clamp-2 text-sm text-muted-foreground min-h-[2.5rem]">
+          {project.description || "No description provided."}
+        </p>
+
+        {/* Stats */}
+        <div className="flex items-center gap-4 pt-2 border-t">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Camera className="h-3.5 w-3.5" />
+            <span className="font-medium">{project.stats_snapshots ?? 0}</span>
+            <span>snapshots</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Rocket className="h-3.5 w-3.5" />
+            <span className="font-medium">{project.stats_deployments ?? 0}</span>
+            <span>deploys</span>
+          </div>
+        </div>
+
+        {/* Arrow indicator */}
+        <div className="flex items-center justify-end">
+          <Link href={`/dashboard/projects/${project.id}/code`}>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -200,46 +203,56 @@ export default function ProjectsIndexPage() {
   const [projectToDeleteId, setProjectToDeleteId] = useState<string | null>(null);
   const [projectToDeleteName, setProjectToDeleteName] = useState<string | null>(null);
 
+  // --- Query to get PostgreSQL User ID ---
   const {
     data: pgUser,
     isLoading: isLoadingUser,
     error: userError,
   } = useQuery({
     queryKey: ["pgUser", user?.id],
-    enabled: isLoaded && !!user?.id,
+    // Only enable if Clerk user data is loaded, signed in, has an ID, and a primary email
+    enabled: isLoaded && isSignedIn && !!user?.id && !!user?.primaryEmailAddress?.emailAddress,
     queryFn: async () => {
-      if (!user) throw new Error("User not available");
-      const primaryEmail = user.emailAddresses?.[0]?.emailAddress ?? "";
+      // Defensive check (though enabled condition should mostly prevent this)
+      if (!user || !user.id || !user.primaryEmailAddress?.emailAddress) {
+        throw new Error("Clerk user data incomplete. Cannot resolve PostgreSQL user ID.");
+      }
+      const primaryEmail = user.primaryEmailAddress.emailAddress;
       return await createOrGetUser({
         clerkUserId: user.id,
         email: primaryEmail,
         name: user.fullName ?? undefined,
       });
     },
+    staleTime: Infinity, // User ID won't change often
+    retry: 1, // Don't retry endlessly if user data is bad
   });
 
+  // --- Query to get Projects ---
   const {
     data: projects,
     isLoading: isLoadingProjects,
     error: projectsError,
   } = useQuery<Project[], Error>({
     queryKey: ["projects", pgUser?.userId],
-    enabled: !!pgUser?.userId,
-    queryFn: () => getProjectsByOwner(pgUser!.userId),
+    // Only enable if pgUser ID is available and Clerk state is loaded and signed in
+    enabled: !!pgUser?.userId && isLoaded && isSignedIn,
+    queryFn: () => getProjectsByOwner(pgUser!.userId), // Use non-null assertion as enabled ensures pgUser is there
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Mutation for deleting a project
   const deleteProjectMutation = useMutation({
     mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] }); // Invalidate project list cache
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Project deleted", { description: "The project has been successfully removed." });
     },
     onError: (error: Error) => {
       toast.error("Failed to delete project", { description: error.message });
     },
     onSettled: () => {
-      setShowDeleteDialog(false); // Close dialog regardless of outcome
+      setShowDeleteDialog(false);
       setProjectToDeleteId(null);
       setProjectToDeleteName(null);
     },
@@ -257,8 +270,10 @@ export default function ProjectsIndexPage() {
     }
   };
 
-  // Loading state
-  if (!isLoaded) {
+  // --- Conditional Rendering for Loading, Auth, and Errors ---
+
+  // Initial loading state for Clerk user data or pgUser resolution
+  if (!isLoaded || isLoadingUser) {
     return (
       <div className="flex min-h-screen flex-col">
         <ProjectListTopbar />
@@ -304,6 +319,75 @@ export default function ProjectsIndexPage() {
     );
   }
 
+  // Handle errors from pgUser resolution
+  if (userError) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <ProjectListTopbar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center text-destructive"
+          >
+            <h2 className="text-xl font-bold mb-2">Authentication Error</h2>
+            <p className="text-sm">
+              Failed to resolve your user ID. This might be a temporary issue or an incomplete profile.
+              Please ensure you are fully logged in with a primary email address.
+            </p>
+            {userError.message && <p className="mt-2 text-xs opacity-80">Details: {userError.message}</p>}
+            <Button onClick={() => window.location.reload()} className='mt-4'>Retry</Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading projects after user is resolved
+  if (isLoadingProjects) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <ProjectListTopbar />
+        <div className="flex-1 p-4 md:p-8 lg:p-12">
+          <div className="mx-auto max-w-7xl">
+            <Skeleton className="mb-8 h-10 w-48" />
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProjectCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle errors from project fetching
+  if (projectsError) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <ProjectListTopbar />
+        <div className="flex flex-1 items-center justify-center p-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center text-destructive"
+          >
+            <h2 className="text-xl font-bold mb-2">Error Loading Projects</h2>
+            <p className="text-sm">
+              Something went wrong while fetching your projects. Please try again.
+            </p>
+            {projectsError.message && <p className="mt-2 text-xs opacity-80">Details: {projectsError.message}</p>}
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["projects"] })} className='mt-4'>
+              Retry Fetching
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render projects or empty state
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <ProjectListTopbar />
@@ -331,33 +415,7 @@ export default function ProjectsIndexPage() {
           </motion.div>
 
           {/* Content */}
-          {isLoadingUser || isLoadingProjects ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <ProjectCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : userError ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl border border-destructive/50 bg-destructive/10 p-6"
-            >
-              <p className="text-sm text-destructive">
-                Failed to resolve user: {userError.message}
-              </p>
-            </motion.div>
-          ) : projectsError ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl border border-destructive/50 bg-destructive/10 p-6"
-            >
-              <p className="text-sm text-destructive">
-                Failed to load projects: {projectsError.message}
-              </p>
-            </motion.div>
-          ) : !projects || projects.length === 0 ? (
+          {!projects || projects.length === 0 ? (
             <EmptyState />
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
@@ -366,7 +424,7 @@ export default function ProjectsIndexPage() {
                   key={project.id}
                   project={project}
                   index={index}
-                  onDelete={handleDeleteClick} // Pass the delete handler
+                  onDelete={handleDeleteClick}
                 />
               ))}
             </div>
