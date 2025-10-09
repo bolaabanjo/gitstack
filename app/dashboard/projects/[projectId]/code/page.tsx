@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { NewFileFolderDialog } from "@/components/code/new-file-folder-dialog";
+import { useUser } from "@clerk/nextjs";
 
 export default function CodeRootPage({ params }: { params: { projectId: string } }) {
   const { projectId } = params;
@@ -196,6 +197,8 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
   }
 
   const isDeleting = deleteFileMutation.isPending || deleteFolderMutation.isPending;
+  const { user } = useUser();
+  const pgUserId = user?.publicMetadata?.pgUserId;
 
   return (
     <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
@@ -272,9 +275,9 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         onClose={() => setShowNewFileDialog(false)}
         projectId={projectId}
         branch={branch}
-        currentPath={path} 
-        pgUserId={""}
-        />
+        currentPath={path}
+        pgUserId={typeof pgUserId === "string" ? pgUserId : ""}
+      />
 
       {/* NEW: Delete File/Folder Confirmation Dialog */}
       <AlertDialog open={showDeleteFileDialog} onOpenChange={setShowDeleteFileDialog}>
