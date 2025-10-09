@@ -191,14 +191,15 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
       </div>
     );
   }
+  
+  const { user } = useUser();
+  const pgUserId = user?.publicMetadata?.pgUserId;
 
   if (!project) {
     return null;
   }
 
   const isDeleting = deleteFileMutation.isPending || deleteFolderMutation.isPending;
-  const { user } = useUser();
-  const pgUserId = user?.publicMetadata?.pgUserId;
 
   return (
     <div className="flex-1 p-4 md:p-8 lg:p-12 space-y-6">
