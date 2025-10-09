@@ -51,7 +51,7 @@ import { useState } from "react"; // Import useState
 // Enhanced skeleton loader with shimmer effect
 function ProjectCardSkeleton() {
   return (
-    <div className="group relative overflow-hidden rounded-xl border bg-card p-6 shadow-sm">
+    <div className="group relative overflow-hidden rounded-sm border bg-card p-6 shadow-sm">
       <div className="space-y-4">
         <div className="flex items-start justify-between">
           <Skeleton className="h-6 w-32" />
@@ -85,7 +85,7 @@ function ProjectCard({ project, index, onDelete }: { project: Project; index: nu
       whileHover={{ y: -4 }}
       className="group relative"
     >
-      <div className="relative overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
+      <div className="relative overflow-hidden rounded-sm border bg-black p-6 shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-lg">
         {/* Gradient overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
