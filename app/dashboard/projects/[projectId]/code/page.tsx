@@ -15,6 +15,7 @@ import {
   type Tag,
   type TreeEntry,
   type Project,
+  DeleteFilePayload,
 } from "@/lib/api";
 import { useState, useEffect } from "react";
 import { RepoHeader } from "@/components/code/repo-header";
@@ -90,7 +91,7 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
 
   // NEW: Mutations for file/folder deletion
   const deleteFileMutation = useMutation({
-    mutationFn: deleteFile,
+    mutationFn: (payload: DeleteFilePayload) => deleteFile(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, path] });
       queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
@@ -106,7 +107,7 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
   });
 
   const deleteFolderMutation = useMutation({
-    mutationFn: deleteFolder,
+    mutationFn: (payload: DeleteFilePayload) => deleteFolder(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tree", projectId, branch, path] });
       queryClient.invalidateQueries({ queryKey: ["snapshots", projectId] });
@@ -156,14 +157,12 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
 
     if (itemToDelete.type === "file") {
       await deleteFileMutation.mutateAsync({
-        projectId,
         branch,
         path: itemToDelete.path,
         userId: project.ownerId, // Use project owner as userId for deletion
       });
     } else { // type === "folder"
       await deleteFolderMutation.mutateAsync({
-        projectId,
         branch,
         path: itemToDelete.path,
         userId: project.ownerId, // Use project owner as userId for deletion
@@ -273,8 +272,9 @@ export default function CodeRootPage({ params }: { params: { projectId: string }
         onClose={() => setShowNewFileDialog(false)}
         projectId={projectId}
         branch={branch}
-        currentPath={path}
-      />
+        currentPath={path} 
+        pgUserId={""}
+        />
 
       {/* NEW: Delete File/Folder Confirmation Dialog */}
       <AlertDialog open={showDeleteFileDialog} onOpenChange={setShowDeleteFileDialog}>
